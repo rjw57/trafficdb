@@ -1,3 +1,7 @@
+"""
+Database models
+===============
+"""
 from enum import Enum
 
 from .wsgi import db
