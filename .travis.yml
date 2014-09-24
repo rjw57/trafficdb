@@ -9,6 +9,9 @@ install:
     - sudo apt-get install libpq-dev
     # Upgrade pip and setuptools to get ones with `wheel` support
     - pip install --upgrade pip setuptools
+    # Dependencies only for travis
+    - pip install coveralls
+    # Install the software itself
     - pip install -e .[docs]
     # Get test database instance and migrate it
     - source development_vars.sh
