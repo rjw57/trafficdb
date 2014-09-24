@@ -1,8 +1,12 @@
 language: python
+cache:
+    apt
 python:
     - "2.7"
     - "3.3"
 install:
+    # Install postgress client library
+    - sudo apt-get install libpq-dev
     # Upgrade pip and setuptools to get ones with `wheel` support
     - pip install --upgrade pip setuptools
     - pip install -e .[docs]

@@ -10,7 +10,7 @@ setup(
     license = 'MIT',
     packages=find_packages(exclude=['tests']),
 
-    install_require=[
+    install_requires=[
         # Flask webapp platform
         'flask',
         'flask-migrate',
@@ -18,13 +18,14 @@ setup(
         'flask-sqlalchemy',
 
         # Database and database migration support
-        'sqlalchemy',
         'alembic',
+        'psycopg2',
+        'sqlalchemy',
     ],
 
     # For testing
     setup_requires=[ 'nose>=1.0', ],
-    tests_require=[ 'coverage', ],
+    tests_require=[ 'coverage', 'requests', 'flask-testing', ],
 
     # For documentation
     extras_require={

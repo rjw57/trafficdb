@@ -20,6 +20,9 @@ app = Flask(__name__)
 # Create app database
 db = SQLAlchemy(app)
 
+# Create migration helper
+migrate = Migrate(app, db)
+
 def configure_from_environment():
     # Try to configure sqlite database URI from environment variable
     try:
@@ -37,9 +40,6 @@ def main():
 
     # Create script manager
     manager = Manager(app)
-
-    # Create migration helper
-    migrate = Migrate(app, db)
     manager.add_command('db', MigrateCommand)
 
     return manager.run()
