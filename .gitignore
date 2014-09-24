@@ -1,0 +1,15 @@
+# Python compiles code
+*.pyc
+__pycache__
+
+# Pip local packages
+*.egg
+*.egg-info
+
+# setuptools build directories
+build
+dist
+
+# Coverage information
+cover
+.coverage
