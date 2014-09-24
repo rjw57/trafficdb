@@ -28,7 +28,11 @@ setup(
 
     # For testing
     setup_requires=[ 'nose>=1.0', ],
-    tests_require=[ 'coverage', 'requests', 'flask-testing', ],
+    tests_require=[
+        'coverage',
+        'flask-testing',
+        'mixer',
+    ],
 
     # For documentation
     extras_require={
