@@ -11,6 +11,9 @@ setup(
     packages=find_packages(exclude=['tests']),
 
     install_requires=[
+        # General language support
+        'enum34',
+
         # Flask webapp platform
         'flask',
         'flask-migrate',
@@ -35,7 +38,7 @@ setup(
     # Scripts and utilities
     entry_points = {
         'console_scripts': [
-            'trafficdb_webapp = trafficdb.wsgi:main',
+            'trafficdb_webapp = trafficdb.manager:main',
         ],
     },
 )
