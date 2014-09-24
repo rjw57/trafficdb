@@ -17,19 +17,23 @@ log = logging.getLogger(__name__)
 # Create root webapp
 app = Flask(__name__)
 
-# Try to configure sqlite database URI from environment variable
-try:
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['SQLALCHEMY_DATABASE_URI']
-except KeyError:
-    log.warn('SQLALCHEMY_DATABASE_URI environment variable undefined.')
-    log.warn('Without it, the app doesn\'t know where to find the database.')
-
 # Create app database
 db = SQLAlchemy(app)
+
+def configure_from_environment():
+    # Try to configure sqlite database URI from environment variable
+    try:
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['SQLALCHEMY_DATABASE_URI']
+    except KeyError:
+        log.warn('SQLALCHEMY_DATABASE_URI environment variable undefined.')
+        log.warn('Without it, the app doesn\'t know where to find the database.')
 
 def main():
     # Set up logging
     logging.basicConfig(level=logging.WARN)
+
+    # Attempt to configure app from environment
+    configure_from_environment()
 
     # Create script manager
     manager = Manager(app)
