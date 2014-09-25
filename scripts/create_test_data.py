@@ -4,23 +4,22 @@ import os
 from flask.ext.migrate import upgrade as upgrade_db
 
 from trafficdb.models import *
-from trafficdb.wsgi import app, db
 from tests.fixtures import *
 from tests.util import drop_all_data
 
-try:
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['SQLALCHEMY_TEST_DATABASE_URI']
-except KeyError:
-    print('SQLALCHEMY_TEST_DATABASE_URI environment variable must be defined')
+# Rollback any incomplete session
+db.session.rollback()
+
+# Remember echo state
+prev_echo = db.engine.echo
+db.engine.echo = False
 
 # Upgrade DB if necessary
 upgrade_db()
 
 # Drop any existing data
 drop_all_data()
-
-# Rollback any incomplete session
-db.session.rollback()
+db.session.commit()
 
 # Create test data
 print('Creating test data...')
@@ -31,3 +30,4 @@ create_fake_observations(link_count=20, start=start_date, duration=duration)
 db.session.commit()
 print('Test data created')
 
+db.engine.echo = prev_echo

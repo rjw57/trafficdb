@@ -8,7 +8,6 @@ from sqlalchemy.sql.expression import Executable, ClauseElement, _literal_as_tex
 
 from trafficdb.models import *
 from trafficdb.queries import *
-from trafficdb.wsgi import app, db
 
 # From https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/Explain
 class explain(Executable, ClauseElement):
