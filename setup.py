@@ -42,7 +42,7 @@ setup(
     # Scripts and utilities
     entry_points = {
         'console_scripts': [
-            'trafficdb_webapp = trafficdb.manager:main',
+            'webapp = trafficdb.manager:main',
         ],
     },
 )

@@ -16,7 +16,7 @@ the unit tests as follows:
 
     $ source development_vars.sh
     Setting test and webapp database to: postgres://...
-    $ trafficdb_webapp db upgrade
+    $ webapp db upgrade
     INFO  [alembic.migration] Context impl PostgresqlImpl.
     INFO  [alembic.migration] Will assume transactional DDL.
     INFO  [alembic.migration] Running upgrade None -> 7dc1a66bb8, Initial database migration

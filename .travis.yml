@@ -15,7 +15,7 @@ install:
     - pip install -e .[docs]
     # Get test database instance and migrate it
     - source development_vars.sh
-    - trafficdb_webapp db upgrade
+    - webapp db upgrade
 script:
     - python setup.py nosetests
     - python setup.py build_sphinx
