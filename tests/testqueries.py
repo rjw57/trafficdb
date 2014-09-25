@@ -13,7 +13,8 @@ class TestQueries(TestCase):
     START_DATE = datetime.datetime(2012, 4, 23)
     END_DATE = datetime.datetime(2012, 4, 25)
 
-    def create_fixtures(self):
+    @classmethod
+    def create_fixtures(cls):
         duration = int((TestQueries.END_DATE - TestQueries.START_DATE).total_seconds() // 60)
         create_fake_observations(start=TestQueries.START_DATE, duration=duration)
 

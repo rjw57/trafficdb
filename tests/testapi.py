@@ -20,7 +20,8 @@ class TestApiRoot(TestCase):
         self.assertEquals(response.json, dict(version=1))
 
 class TestSimpleQueries(TestCase):
-    def create_fixtures(self):
+    @classmethod
+    def create_fixtures(cls):
         start_date = datetime.datetime(2013, 9, 10)
 
         # NOTE: total links is 104

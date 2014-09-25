@@ -13,32 +13,34 @@ log = logging.getLogger(__name__)
 
 raises_integrity_error = raises(exc.IntegrityError)
 
+# Create our test suite app
+log.info('Creating new flask app')
+app = create_app()
+
+# Setup mixer
+mixer.init_app(app)
+
 class TestCase(FlaskTestCase):
     """flask.ext.testing.TestCase subclass which sets up our mock testing
     database and takes care of clearing it and re-initialising before each
     test.
 
-    Calls create_fixtures() from setUp() to provide an opportunity to create DB
-    fixtures.
+    Calls classmethod create_fixtures() from setUpClass() to provide an
+    opportunity to create DB fixtures.
 
     """
     def create_app(self):
-        # Create our test suite app
-        log.info('Creating new flask app')
-        app = create_app()
+        return app
 
-        # Setup mixer
-        mixer.init_app(app)
-
+    @classmethod
+    def setUpClass(cls):
         with app.app_context():
             # Delete any data initially present
             drop_all_data()
 
             # Create fixtures
-            self.create_fixtures()
+            cls.create_fixtures()
             db.session.commit()
-
-        return app
 
     def setUp(self):
         # Switch on logging
@@ -53,7 +55,8 @@ class TestCase(FlaskTestCase):
         # Switch off logging
         db.engine.echo = False
 
-    def create_fixtures(self):
+    @classmethod
+    def create_fixtures(cls):
         pass
 
 def drop_all_data():
