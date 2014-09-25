@@ -6,7 +6,7 @@ python:
     - "3.3"
 env:
     # USe postgression to get a test database
-    - SQLALCHEMY_TEST_DATABASE_URI=$(curl http://api.postgression.com)
+    - SQLALCHEMY_TEST_DATABASE_URI=$(curl -s http://api.postgression.com)
 install:
     # Install postgress client library
     - sudo apt-get install libpq-dev
@@ -16,8 +16,8 @@ install:
     - pip install coveralls
     # Install the software itself
     - pip install -e .[docs]
-    # Migrate development DB
-    - webapp db upgrade
+    # Migrate development DB (note the requirement to set SQLALCHEMY_DATABASE_URI)
+    - SQLALCHEMY_DATABASE_URI=$SQLALCHEMY_TEST_DATABASE_URI webapp db upgrade
 script:
     - python setup.py nosetests
     - python setup.py build_sphinx
