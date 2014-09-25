@@ -10,6 +10,9 @@ from trafficdb.wsgi import app, db
 
 raises_integrity_error = raises(exc.IntegrityError)
 
+# Configure application
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['SQLALCHEMY_TEST_DATABASE_URI']
+
 class TestCase(FlaskTestCase):
     """flask.ext.testing.TestCase subclass which sets up our mock testing
     database and takes care of clearing it and re-initialising before each
@@ -23,7 +26,6 @@ class TestCase(FlaskTestCase):
         # Note that we only every use the SQLALCHEMY_TEST_DATABASE_URI
         # environment variable which means that, hopefully, it would be quite
         # hard to run the test suite against production(!)
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['SQLALCHEMY_TEST_DATABASE_URI']
         mixer.init_app(app)
         return app
 
