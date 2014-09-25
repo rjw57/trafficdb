@@ -1,4 +1,4 @@
-"""empty message
+"""Add observation observed_at index
 
 Revision ID: 390e44cdfbe
 Revises: 1ab13f7b5ba
