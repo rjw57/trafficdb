@@ -17,10 +17,10 @@ def create_manager():
 
     return manager
 
-def main():
+def main(): # pragma: no cover
     import logging
     logging.basicConfig(level=logging.WARN)
     return create_manager().run()
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     main()
