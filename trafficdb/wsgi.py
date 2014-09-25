@@ -21,6 +21,11 @@ db = SQLAlchemy(app)
 # Create migration helper
 migrate = Migrate(app, db)
 
+# Create blueprints
+import trafficdb.blueprint as bp
+for bp_name in bp.__all__:
+    app.register_blueprint(getattr(bp, bp_name), url_prefix='/'+bp_name)
+
 def configure_from_environment():
     # Try to configure sqlite database URI from environment variable
     try:
