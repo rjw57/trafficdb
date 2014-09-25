@@ -20,7 +20,7 @@ class PythonEnum(types.TypeDecorator):
     impl = types.Enum
 
     def __init__(self, enum_class, **kw):
-        super().__init__(*(m.name for m in enum_class), **kw)
+        super(PythonEnum, self).__init__(*(m.name for m in enum_class), **kw)
         self._enum_class = enum_class
 
     def process_bind_param(self, value, dialect):
