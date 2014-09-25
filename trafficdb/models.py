@@ -22,7 +22,7 @@ class Observation(db.Model):
     __tablename__ = 'observations'
 
     id          = db.Column(db.Integer, primary_key=True)
-    value       = db.Column(db.Float)
-    type        = db.Column(db.Enum(*_OBSERVATION_TYPES, name='observation_types'))
-    observed_at = db.Column(db.DateTime)
-    link_id     = db.Column(db.Integer, db.ForeignKey('links.id'))
+    value       = db.Column(db.Float, nullable=False)
+    type        = db.Column(db.Enum(*_OBSERVATION_TYPES, name='observation_types'), nullable=False)
+    observed_at = db.Column(db.DateTime, nullable=False)
+    link_id     = db.Column(db.Integer, db.ForeignKey('links.id'), nullable=False)
