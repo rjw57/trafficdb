@@ -8,7 +8,6 @@ import os
 
 from flask import Flask
 from flask.ext.migrate import Migrate
-from flask.ext.sqlalchemy import SQLAlchemy
 
 log = logging.getLogger(__name__)
 
@@ -22,17 +21,21 @@ def _default_index(obj, key, default=None):
 class AppConfig(object):
     SQLALCHEMY_DATABASE_URI = _default_index(os.environ, 'SQLALCHEMY_DATABASE_URI')
 
-# Create root webapp
-app = Flask(__name__)
-app.config.from_object('trafficdb.wsgi.AppConfig')
+def create_app():
+    # Create root webapp
+    app = Flask(__name__)
+    app.config.from_object('trafficdb.wsgi.AppConfig')
 
-# Create app database
-db = SQLAlchemy(app)
+    # Register this app with the database
+    from trafficdb.models import db
+    db.init_app(app)
 
-# Create migration helper
-migrate = Migrate(app, db)
+    # Create migration helper
+    migrate = Migrate(app, db)
 
-# Create blueprints
-import trafficdb.blueprint as bp
-for bp_name in bp.__all__:
-    app.register_blueprint(getattr(bp, bp_name), url_prefix='/'+bp_name)
+    # Create blueprints
+    import trafficdb.blueprint as bp
+    for bp_name in bp.__all__:
+        app.register_blueprint(getattr(bp, bp_name), url_prefix='/'+bp_name)
+
+    return app

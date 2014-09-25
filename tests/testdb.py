@@ -3,7 +3,6 @@ import logging
 from mixer.backend.flask import mixer
 
 from trafficdb.models import *
-from trafficdb.wsgi import db
 
 from .fixtures import create_fake_observations
 from .util import TestCase, raises_integrity_error
@@ -11,8 +10,7 @@ from .util import TestCase, raises_integrity_error
 log = logging.getLogger(__name__)
 
 class TestLinksModel(TestCase):
-    @classmethod
-    def create_fixtures(cls):
+    def create_fixtures(self):
         # Create some random links
         link_fixtures = mixer.cycle(5).blend(Link, geom='SRID=4326; LINESTRING EMPTY')
         db.session.add_all(link_fixtures)
@@ -23,8 +21,7 @@ class TestLinksModel(TestCase):
         assert link_count == 5
 
 class TestRealisticData(TestCase):
-    @classmethod
-    def create_fixtures(cls):
+    def create_fixtures(self):
         create_fake_observations()
 
     def setUp(self):

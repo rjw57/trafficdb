@@ -6,8 +6,6 @@ try:
 except ImportError:
     from urllib.parse import urljoin, urlencode
 
-from trafficdb.wsgi import db
-
 from .fixtures import create_fake_observations
 from .util import TestCase
 
@@ -22,8 +20,7 @@ class TestApiRoot(TestCase):
         self.assertEquals(response.json, dict(version=1))
 
 class TestSimpleQueries(TestCase):
-    @classmethod
-    def create_fixtures(cls):
+    def create_fixtures(self):
         start_date = datetime.datetime(2013, 9, 10)
 
         # NOTE: total links is 104
@@ -33,7 +30,7 @@ class TestSimpleQueries(TestCase):
             link_count=100, start=start_date, duration=60)
 
     def test_link_count(self):
-        from trafficdb.models import Link
+        from trafficdb.models import db, Link
         n_links = db.session.query(Link.id).count()
         log.info('Total links: {0}'.format(n_links))
         self.assertEqual(n_links, 104)

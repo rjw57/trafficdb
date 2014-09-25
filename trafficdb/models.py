@@ -3,14 +3,17 @@ Database models
 ===============
 """
 
-__all__ = ['Link', 'Observation', 'ObservationType']
+__all__ = ['db', 'Link', 'Observation', 'ObservationType']
 
 from enum import Enum
 
+from flask import current_app as app
+from flask.ext.sqlalchemy import SQLAlchemy
 from geoalchemy2 import Geometry
 from sqlalchemy import types
 
-from .wsgi import db
+# Create app database
+db = SQLAlchemy()
 
 class PythonEnum(types.TypeDecorator):
     """A SQLAlchemy type decorator for Python 3.4-style enums. Taken from

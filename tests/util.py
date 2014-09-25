@@ -1,3 +1,4 @@
+import logging
 import os
 
 from flask.ext.testing import TestCase as FlaskTestCase
@@ -6,12 +7,11 @@ from nose.tools import raises
 from sqlalchemy import exc
 
 from trafficdb.models import *
-from trafficdb.wsgi import app, db
+from trafficdb.wsgi import create_app
+
+log = logging.getLogger(__name__)
 
 raises_integrity_error = raises(exc.IntegrityError)
-
-# Configure application
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['SQLALCHEMY_TEST_DATABASE_URI']
 
 class TestCase(FlaskTestCase):
     """flask.ext.testing.TestCase subclass which sets up our mock testing
@@ -26,21 +26,24 @@ class TestCase(FlaskTestCase):
         # Note that we only every use the SQLALCHEMY_TEST_DATABASE_URI
         # environment variable which means that, hopefully, it would be quite
         # hard to run the test suite against production(!)
+
+        # Create our test suite app
+        log.info('Creating new flask app')
+        app = create_app()
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['SQLALCHEMY_TEST_DATABASE_URI']
+
+        # Setup mixer
         mixer.init_app(app)
+
+        with app.app_context():
+            # Delete any data initially present
+            drop_all_data()
+
+            # Create fixtures
+            self.create_fixtures()
+            db.session.commit()
+
         return app
-
-    @classmethod
-    def setUpClass(cls):
-        # Delete any data initially present
-        drop_all_data()
-
-        # Create fixtures
-        cls.create_fixtures()
-        db.session.commit()
-
-    @classmethod
-    def tearDownClass(cls):
-        drop_all_data() # Delete all the data
 
     def setUp(self):
         # Switch on logging
@@ -55,7 +58,6 @@ class TestCase(FlaskTestCase):
         # Switch off logging
         db.engine.echo = False
 
-    @classmethod
     def create_fixtures(self):
         pass
 

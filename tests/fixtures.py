@@ -4,7 +4,6 @@ import logging
 from mixer.backend.flask import Mixer
 
 from trafficdb.models import *
-from trafficdb.wsgi import db
 
 log = logging.getLogger(__name__)
 

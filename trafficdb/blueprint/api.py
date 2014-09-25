@@ -4,7 +4,6 @@ from flask import *
 from sqlalchemy import func
 
 from trafficdb.models import *
-from trafficdb.wsgi import db
 
 __all__ = ['api']
 

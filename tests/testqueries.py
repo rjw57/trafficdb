@@ -3,7 +3,6 @@ import logging
 
 from trafficdb.models import *
 from trafficdb.queries import *
-from trafficdb.wsgi import db
 
 from .fixtures import create_fake_observations
 from .util import TestCase
@@ -14,8 +13,7 @@ class TestQueries(TestCase):
     START_DATE = datetime.datetime(2012, 4, 23)
     END_DATE = datetime.datetime(2012, 4, 25)
 
-    @classmethod
-    def create_fixtures(cls):
+    def create_fixtures(self):
         duration = int((TestQueries.END_DATE - TestQueries.START_DATE).total_seconds() // 60)
         create_fake_observations(start=TestQueries.START_DATE, duration=duration)
 
