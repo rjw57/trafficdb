@@ -2,6 +2,9 @@
 Database models
 ===============
 """
+
+__all__ = ['Link', 'Observation', 'ObservationType']
+
 from enum import Enum
 
 from .wsgi import db
