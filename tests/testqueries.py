@@ -11,11 +11,13 @@ from .util import TestCase
 log = logging.getLogger(__name__)
 
 class TestQueries(TestCase):
-    def create_fixtures(self):
-        self.start_date = datetime.datetime(2012, 4, 23)
-        self.end_date = datetime.datetime(2012, 4, 25)
-        duration = int((self.end_date - self.start_date).total_seconds() // 60)
-        create_fake_observations(start=self.start_date, duration=duration)
+    START_DATE = datetime.datetime(2012, 4, 23)
+    END_DATE = datetime.datetime(2012, 4, 25)
+
+    @classmethod
+    def create_fixtures(cls):
+        duration = int((TestQueries.END_DATE - TestQueries.START_DATE).total_seconds() // 60)
+        create_fake_observations(start=TestQueries.START_DATE, duration=duration)
 
     def test_observations_created(self):
         self.assertNotEqual(db.session.query(Observation.id).count(), 0)
@@ -23,20 +25,20 @@ class TestQueries(TestCase):
     def test_date_range(self):
         min_d, max_d = observation_date_range(db.session).first()
         log.info('Min and max dates returned: {0} and {1}'.format(min_d, max_d))
-        assert min_d >= self.start_date
-        assert max_d <= self.end_date
+        assert min_d >= TestQueries.START_DATE
+        assert max_d <= TestQueries.END_DATE
         assert (max_d - min_d).total_seconds() > 60
 
     def test_single_link_observations(self):
         link_id = db.session.query(Link.id).limit(1).first().id
         logging.info('Fetching observations for link {0}'.format(link_id))
         obs = observations_for_link(db.session, link_id, ObservationType.SPEED,
-                self.start_date, self.start_date + datetime.timedelta(days=1)).all()
+                TestQueries.START_DATE, TestQueries.START_DATE + datetime.timedelta(days=1)).all()
         self.assertEqual(len(obs), 97)
 
     def test_multiple_link_observations(self):
         link_ids = db.session.query(Link.id).limit(3).all()
         logging.info('Using link ids: {0}'.format(link_ids))
         obs = observations_for_links(db.session, link_ids, ObservationType.SPEED,
-                self.start_date, self.start_date + datetime.timedelta(days=1)).all()
+                TestQueries.START_DATE, TestQueries.START_DATE + datetime.timedelta(days=1)).all()
         self.assertEqual(len(obs), 97*3)
