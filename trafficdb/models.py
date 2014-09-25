@@ -7,6 +7,7 @@ __all__ = ['Link', 'Observation', 'ObservationType']
 
 from enum import Enum
 
+from geoalchemy2 import Geometry
 from sqlalchemy import types
 
 from .wsgi import db
@@ -42,6 +43,7 @@ class Link(db.Model):
     __tablename__ = 'links'
 
     id          = db.Column(db.Integer, primary_key=True)
+    geom        = db.Column(Geometry('LINESTRING', srid=4326), nullable=False)
 
 class Observation(db.Model):
     __tablename__ = 'observations'

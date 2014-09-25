@@ -22,6 +22,7 @@ setup(
 
         # Database and database migration support
         'alembic',
+        'GeoAlchemy2',
         'psycopg2',
         'sqlalchemy',
     ],
