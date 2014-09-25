@@ -36,6 +36,21 @@ class TestSimpleQueries(TestCase):
         log.info('Total links: {0}'.format(n_links))
         self.assertEqual(n_links, 104)
 
+    def test_empty_links_document(self):
+        log.info('Querying page beyond link list')
+        query = { 'from': 10000 }
+        url = API_PREFIX + '/links?' + urlencode(query)
+        response = self.client.get(url)
+        self.assertIsNot(response.json, None)
+
+        page = response.json['page']
+        links = response.json['data']
+
+        self.assertEqual(len(links), 0)
+        self.assertIsNone(page['first'])
+        self.assertIsNone(page['last'])
+        self.assertFalse(page['more'])
+
     def test_all_links(self):
         log.info('Querying all links')
         query = None

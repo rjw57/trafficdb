@@ -41,8 +41,8 @@ def links():
 
     # Form response
     page = dict(
-        first = links[0]['id'],
-        last = links[-1]['id'],
+        first = links[0]['id'] if len(links) > 0 else None,
+        last = links[-1]['id'] if len(links) > 0 else None,
         count = count, more=more
     )
     response = dict(data=links, page=page)
