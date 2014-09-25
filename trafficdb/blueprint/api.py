@@ -22,28 +22,36 @@ def index():
 
 @app.route('/links')
 def links():
+    requested_count = min(PAGE_LIMIT, int(request.args.get('count', PAGE_LIMIT)))
+
     # Query link objects
-    links_q = db.session.query(Link.id, func.ST_AsText(Link.geom)).order_by(Link.id).\
+    links_q = db.session.query(Link.id, func.ST_AsGeoJSON(Link.geom)).order_by(Link.id).\
             filter(Link.id >= request.args.get('from', 0)).\
-            limit(PAGE_LIMIT+1)
+            limit(requested_count+1)
 
     def row_to_dict(row):
-        return dict(id=row[0], geom=row[1])
+        feature = dict(
+            type='Feature',
+            id=row[0],
+            geometry=json.loads(row[1])
+        )
+        return feature
 
     links = list(row_to_dict(l) for l in links_q)
 
     # How many links to return and do we still have more?
-    count = min(PAGE_LIMIT, len(links))
-    more = (len(links) == PAGE_LIMIT+1)
+    count = min(requested_count, len(links))
+    more = (len(links) == requested_count+1)
 
     # Limit size of output
-    links = links[:PAGE_LIMIT]
+    links = links[:requested_count]
 
     # Form response
+    feature_collection = dict(type='FeatureCollection', features=links)
     page = dict(
         first = links[0]['id'] if len(links) > 0 else None,
         last = links[-1]['id'] if len(links) > 0 else None,
         count = count, more=more
     )
-    response = dict(data=links, page=page)
+    response = dict(data=feature_collection, page=page)
     return jsonify(response)

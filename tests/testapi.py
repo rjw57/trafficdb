@@ -44,12 +44,34 @@ class TestSimpleQueries(TestCase):
         self.assertIsNot(response.json, None)
 
         page = response.json['page']
-        links = response.json['data']
+        links = response.json['data']['features']
 
         self.assertEqual(len(links), 0)
         self.assertIsNone(page['first'])
         self.assertIsNone(page['last'])
         self.assertFalse(page['more'])
+
+    def test_small_counts(self):
+        log.info('Querying 10 links')
+        query = { 'count': 10 }
+        url = API_PREFIX + '/links?' + urlencode(query)
+        response = self.client.get(url)
+        self.assertIsNot(response.json, None)
+        page = response.json['page']
+        links = response.json['data']['features']
+        self.assertEqual(len(links), 10)
+        self.assertEqual(len(links), page['count'])
+
+    def test_huge_counts(self):
+        log.info('Querying 100 links (should be truncated)')
+        query = { 'count': 100 }
+        url = API_PREFIX + '/links?' + urlencode(query)
+        response = self.client.get(url)
+        self.assertIsNot(response.json, None)
+        page = response.json['page']
+        links = response.json['data']['features']
+        self.assertEqual(len(links), page['count'])
+        self.assertTrue(len(links) < 100)
 
     def test_all_links(self):
         log.info('Querying all links')
@@ -65,7 +87,7 @@ class TestSimpleQueries(TestCase):
             self.assertIsNot(response.json, None)
 
             page = response.json['page']
-            links = response.json['data']
+            links = response.json['data']['features']
             log.info('Got {0} links'.format(len(links)))
             log.info('Page structure: {0}'.format(page))
 
