@@ -27,23 +27,33 @@ class TestCase(FlaskTestCase):
         mixer.init_app(app)
         return app
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         # Delete any data initially present
         drop_all_data()
 
+        # Create fixtures
+        cls.create_fixtures()
+        db.session.commit()
+
+    @classmethod
+    def tearDownClass(cls):
+        drop_all_data() # Delete all the data
+
+    def setUp(self):
         # Switch on logging
         db.engine.echo = True
 
-        # Create fixtures
-        self.create_fixtures()
+        # Start transaction
+        db.session.begin_nested()
 
     def tearDown(self):
+        db.session.rollback() # If the previous transaction failed
+
         # Switch off logging
         db.engine.echo = False
 
-        db.session.rollback() # If the previous transaction failed
-        drop_all_data() # Delete all the data
-
+    @classmethod
     def create_fixtures(self):
         pass
 
