@@ -4,6 +4,9 @@ cache:
 python:
     - "2.7"
     - "3.3"
+env:
+    # USe postgression to get a test database
+    - SQLALCHEMY_TEST_DATABASE_URI=$(curl http://api.postgression.com)
 install:
     # Install postgress client library
     - sudo apt-get install libpq-dev
@@ -13,8 +16,7 @@ install:
     - pip install coveralls
     # Install the software itself
     - pip install -e .[docs]
-    # Get test database instance and migrate it
-    - source development_vars.sh
+    # Migrate development DB
     - webapp db upgrade
 script:
     - python setup.py nosetests
