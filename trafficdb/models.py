@@ -7,14 +7,36 @@ __all__ = ['Link', 'Observation', 'ObservationType']
 
 from enum import Enum
 
+from sqlalchemy import types
+
 from .wsgi import db
+
+class PythonEnum(types.TypeDecorator):
+    """A SQLAlchemy type decorator for Python 3.4-style enums. Taken from
+    https://groups.google.com/forum/#!msg/sqlalchemy/5yvdhl9ErMo/ArJJad8byZkJ.
+
+    """
+
+    impl = types.Enum
+
+    def __init__(self, enum_class, **kw):
+        super().__init__(*(m.name for m in enum_class), **kw)
+        self._enum_class = enum_class
+
+    def process_bind_param(self, value, dialect):
+        return value.name
+
+    def process_result_value(self, value, dialect):
+        return self._enum_class[value]
+
+    @property
+    def python_type(self):
+        return self._enum_class
 
 class ObservationType(Enum):
     SPEED       = 0
     FLOW        = 1
     OCCUPANCY   = 2
-
-_OBSERVATION_TYPES = list(ObservationType.__members__.keys())
 
 class Link(db.Model):
     __tablename__ = 'links'
@@ -26,8 +48,6 @@ class Observation(db.Model):
 
     id          = db.Column(db.Integer, primary_key=True)
     value       = db.Column(db.Float, nullable=False)
-    type        = db.Column(db.Enum(*_OBSERVATION_TYPES, name='observation_types'), nullable=False)
+    type        = db.Column(PythonEnum(ObservationType, name='observation_types'), nullable=False)
     observed_at = db.Column(db.DateTime, nullable=False)
     link_id     = db.Column(db.Integer, db.ForeignKey('links.id'), nullable=False)
-
-    link        = db.relationship('Link')

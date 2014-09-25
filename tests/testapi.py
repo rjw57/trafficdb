@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 API_PREFIX = '/api'
 
-class TestApi(TestCase):
+class TestApiRoot(TestCase):
     def test_api_root(self):
         response = self.client.get(API_PREFIX + '/')
         self.assertIsNot(response.json, None)

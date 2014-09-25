@@ -31,10 +31,16 @@ class TestCase(FlaskTestCase):
         # Delete any data initially present
         self._delete_all()
 
+        # Switch on logging
+        db.engine.echo = True
+
         # Create fixtures
         self.create_fixtures()
 
     def tearDown(self):
+        # Switch off logging
+        db.engine.echo = False
+
         db.session.rollback() # If the previous transaction failed
         self._delete_all() # Delete all the data
 
