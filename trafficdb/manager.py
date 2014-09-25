@@ -7,7 +7,7 @@ import logging
 from flask.ext.migrate import MigrateCommand
 from flask.ext.script import Manager
 
-from .wsgi import app, db, configure_from_environment
+from .wsgi import app, db
 from .models import *
 
 log = logging.getLogger(__name__)
@@ -15,9 +15,6 @@ log = logging.getLogger(__name__)
 def main():
     # Set up logging
     logging.basicConfig(level=logging.WARN)
-
-    # Attempt to configure app from environment
-    configure_from_environment()
 
     # Create script manager
     manager = Manager(app)

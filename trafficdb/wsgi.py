@@ -12,8 +12,19 @@ from flask.ext.sqlalchemy import SQLAlchemy
 
 log = logging.getLogger(__name__)
 
+def _default_index(obj, key, default=None):
+    try:
+        return obj[key]
+    except (KeyError, IndexError):
+        return default
+
+# Default configuration
+class AppConfig(object):
+    SQLALCHEMY_DATABASE_URI = _default_index(os.environ, 'SQLALCHEMY_DATABASE_URI')
+
 # Create root webapp
 app = Flask(__name__)
+app.config.from_object('trafficdb.wsgi.AppConfig')
 
 # Create app database
 db = SQLAlchemy(app)
@@ -25,13 +36,3 @@ migrate = Migrate(app, db)
 import trafficdb.blueprint as bp
 for bp_name in bp.__all__:
     app.register_blueprint(getattr(bp, bp_name), url_prefix='/'+bp_name)
-
-def configure_from_environment():
-    # Try to configure sqlite database URI from environment variable
-    try:
-        database_uri = os.environ['SQLALCHEMY_DATABASE_URI']
-    except KeyError:
-        log.warn('SQLALCHEMY_DATABASE_URI environment variable undefined.')
-        log.warn('Without it, the app doesn\'t know where to find the database.')
-    else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
