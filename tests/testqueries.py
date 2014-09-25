@@ -20,6 +20,13 @@ class TestQueries(TestCase):
     def test_observations_created(self):
         self.assertNotEqual(db.session.query(Observation.id).count(), 0)
 
+    def test_date_range(self):
+        min_d, max_d = observation_date_range(db.session).first()
+        log.info('Min and max dates returned: {0} and {1}'.format(min_d, max_d))
+        assert min_d >= self.start_date
+        assert max_d <= self.end_date
+        assert (max_d - min_d).total_seconds() > 60
+
     def test_single_link_observations(self):
         link_id = db.session.query(Link.id).limit(1).first().id
         logging.info('Fetching observations for link {0}'.format(link_id))
