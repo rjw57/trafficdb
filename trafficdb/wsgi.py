@@ -17,14 +17,10 @@ def _default_index(obj, key, default=None):
     except (KeyError, IndexError):
         return default
 
-# Default configuration
-class AppConfig(object):
-    SQLALCHEMY_DATABASE_URI = _default_index(os.environ, 'SQLALCHEMY_DATABASE_URI')
-
 def create_app():
     # Create root webapp
     app = Flask(__name__)
-    app.config.from_object('trafficdb.wsgi.AppConfig')
+    app.config.from_pyfile('defaultconfig.py')
 
     # Register this app with the database
     from trafficdb.models import db

@@ -23,14 +23,9 @@ class TestCase(FlaskTestCase):
 
     """
     def create_app(self):
-        # Note that we only every use the SQLALCHEMY_TEST_DATABASE_URI
-        # environment variable which means that, hopefully, it would be quite
-        # hard to run the test suite against production(!)
-
         # Create our test suite app
         log.info('Creating new flask app')
         app = create_app()
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['SQLALCHEMY_TEST_DATABASE_URI']
 
         # Setup mixer
         mixer.init_app(app)
