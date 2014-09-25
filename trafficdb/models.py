@@ -54,3 +54,6 @@ class Observation(db.Model):
 
 # An index to enable efficient retrieval of observations in a range.
 db.Index('ix_observation_observed_at', Observation.observed_at)
+
+# An index to enable efficient retrieval of observations in a range and link.
+db.Index('ix_observation_observed_at_link_id', Observation.observed_at, Observation.link_id)
