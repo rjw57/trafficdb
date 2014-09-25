@@ -1,6 +1,5 @@
 import logging
 
-from flask.ext.migrate import upgrade as db_upgrade, current as db_current
 from mixer.backend.flask import mixer
 
 from trafficdb.models import *
