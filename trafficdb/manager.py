@@ -17,7 +17,7 @@ def create_manager():
 
     return manager
 
-def main(): # pragma: no cover
+def main():
     import logging
     logging.basicConfig(level=logging.WARN)
     return create_manager().run()
