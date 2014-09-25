@@ -5,14 +5,14 @@ from mixer.backend.flask import Mixer
 from trafficdb.models import *
 from trafficdb.wsgi import db
 
-def create_fake_observations():
+def create_fake_observations(link_count=3, start=datetime.datetime(2013, 4, 29), duration=60*3):
     """Create a set of fake observations in the database."""
 
     # Disable auto-add to db for mixer
     mixer = Mixer(commit=False)
 
     # Create some random links
-    links = mixer.cycle(3).blend(Link)
+    links = mixer.cycle(link_count).blend(Link)
     db.session.add_all(links)
 
     # Extract ids
@@ -20,8 +20,7 @@ def create_fake_observations():
 
     # A set of observation times
     obs_times = []
-    start = datetime.datetime(2013, 4, 29)
-    for minutes in range(0, 60*3, 15):
+    for minutes in range(0, duration, 15):
         obs_times.append(start + datetime.timedelta(minutes=minutes))
 
     # For each link, create some random observations

@@ -29,7 +29,7 @@ class TestCase(FlaskTestCase):
 
     def setUp(self):
         # Delete any data initially present
-        self._delete_all()
+        drop_all_data()
 
         # Switch on logging
         db.engine.echo = True
@@ -42,12 +42,12 @@ class TestCase(FlaskTestCase):
         db.engine.echo = False
 
         db.session.rollback() # If the previous transaction failed
-        self._delete_all() # Delete all the data
+        drop_all_data() # Delete all the data
 
     def create_fixtures(self):
         pass
 
-    def _delete_all(self):
-        db.session.query(Observation).delete()
-        db.session.query(Link).delete()
+def drop_all_data():
+    db.session.query(Observation).delete()
+    db.session.query(Link).delete()
 
