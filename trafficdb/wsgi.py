@@ -3,19 +3,8 @@ WSGI-compatible web application
 ===============================
 
 """
-import logging
-import os
-
 from flask import Flask
 from flask.ext.migrate import Migrate
-
-log = logging.getLogger(__name__)
-
-def _default_index(obj, key, default=None):
-    try:
-        return obj[key]
-    except (KeyError, IndexError):
-        return default
 
 def create_app():
     # Create root webapp
