@@ -63,6 +63,15 @@ class TestObservationModel(TestCase):
         db.session.rollback() # If the previous transaction failed
         delete_all(db.session)
 
+    def test_link_attribute(self):
+        link_ids = set(link.id for link in db.session.query(Link))
+        for o in db.session.query(Observation):
+            assert o.link is not None
+            assert hasattr(o.link, 'id')
+            log.info('Observation {0.id} with link {1.id}'.format(o, o.link))
+            assert o.link.id == o.link_id
+            assert o.link_id in link_ids
+
     def test_observations_created(self):
         obs_count = db.session.query(Observation).count()
         log.info('Observations in database: {0}'.format(obs_count))

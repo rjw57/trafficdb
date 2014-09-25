@@ -26,3 +26,5 @@ class Observation(db.Model):
     type        = db.Column(db.Enum(*_OBSERVATION_TYPES, name='observation_types'), nullable=False)
     observed_at = db.Column(db.DateTime, nullable=False)
     link_id     = db.Column(db.Integer, db.ForeignKey('links.id'), nullable=False)
+
+    link        = db.relationship('Link')
