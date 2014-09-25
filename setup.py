@@ -33,6 +33,7 @@ setup(
         'coverage',
         'flask-testing',
         'mixer',
+        'mock',
     ],
 
     # For documentation
