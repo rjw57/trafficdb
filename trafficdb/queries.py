@@ -14,6 +14,13 @@ def observations_for_link(session, link_id, type, min_datetime, max_datetime):
             filter(Observation.observed_at <= max_datetime).\
             order_by(Observation.observed_at)
 
+def observations_for_links(session, link_ids, type, min_datetime, max_datetime):
+    return session.query(Observation).filter_by(type=type).\
+            filter(Observation.link_id.in_(link_ids)).\
+            filter(Observation.observed_at >= min_datetime).\
+            filter(Observation.observed_at <= max_datetime).\
+            order_by(Observation.link_id, Observation.observed_at)
+
 def observation_date_range(session):
     """A query which returns one row with the minimum (earliest) observation
     date and the maximum (latest) observation date.
