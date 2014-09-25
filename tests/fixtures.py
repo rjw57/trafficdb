@@ -12,7 +12,7 @@ def create_fake_observations(link_count=3, start=datetime.datetime(2013, 4, 29),
     mixer = Mixer(commit=False)
 
     # Create some random links
-    links = mixer.cycle(link_count).blend(Link)
+    links = mixer.cycle(link_count).blend(Link, geom='SRID=4326;LINESTRING EMPTY')
     db.session.add_all(links)
 
     # Extract ids

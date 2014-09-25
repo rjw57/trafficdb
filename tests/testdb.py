@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 class TestLinksModel(TestCase):
     def create_fixtures(self):
         # Create some random links
-        self.link_fixtures = mixer.cycle(5).blend(Link)
+        self.link_fixtures = mixer.cycle(5).blend(Link, geom='SRID=4326; LINESTRING EMPTY')
         db.session.add_all(self.link_fixtures)
 
     def test_links_created(self):
