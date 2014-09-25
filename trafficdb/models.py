@@ -51,3 +51,6 @@ class Observation(db.Model):
     type        = db.Column(PythonEnum(ObservationType, name='observation_types'), nullable=False)
     observed_at = db.Column(db.DateTime, nullable=False)
     link_id     = db.Column(db.Integer, db.ForeignKey('links.id'), nullable=False)
+
+# An index to enable efficient retrieval of observations in a range.
+db.Index('ix_observation_observed_at', Observation.observed_at)
