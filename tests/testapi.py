@@ -171,6 +171,46 @@ class TestSimpleQueries(TestCase):
         log.info('Got status: {0}'.format(response.status_code))
         self.assertEqual(response.status_code, 404)
 
+    def test_observations_for_bad_link(self):
+        from trafficdb.models import db, Link
+        from sqlalchemy import func
+
+        # Check that non-existent link whose id is of the wrong format returns 404
+        log.info('Querying for non-existent link')
+        url = API_PREFIX + '/links/0/observations'
+        log.info('GET {0}'.format(url))
+        response = self.client.get(url)
+        log.info('Got status: {0}'.format(response.status_code))
+        self.assertEqual(response.status_code, 404)
+
+    def test_observations_for_link_with_negative_duration(self):
+        log.info('Querying first link')
+        link_id = self.client.get(API_PREFIX + '/links/?count=1').\
+                json['data']['features'][0]['id']
+        log.info('Querying for link {0}'.format(link_id))
+
+        url = API_PREFIX + '/links/{0}/observations'.format(link_id)
+        url = urljoin(url, '?' + urlencode(dict(duration=-2)))
+        log.info('GET {0}'.format(url))
+        response = self.client.get(url)
+
+        # It's a bad request to request a -ve duration
+        self.assertEquals(response.status_code, 400)
+
+    def test_observations_for_link_with_bad_duration(self):
+        log.info('Querying first link')
+        link_id = self.client.get(API_PREFIX + '/links/?count=1').\
+                json['data']['features'][0]['id']
+        log.info('Querying for link {0}'.format(link_id))
+
+        url = API_PREFIX + '/links/{0}/observations'.format(link_id)
+        url = urljoin(url, '?' + urlencode(dict(duration='one')))
+        log.info('GET {0}'.format(url))
+        response = self.client.get(url)
+
+        # It's a bad request to request a non-numeric duration
+        self.assertEquals(response.status_code, 400)
+
     def test_observations_for_link(self):
         log.info('Querying first link')
         link_id = self.client.get(API_PREFIX + '/links/?count=1').\

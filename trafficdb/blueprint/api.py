@@ -149,7 +149,14 @@ def observations(unverified_link_id):
     link_data = dict(id=link_urlsafe_id)
 
     # Work out if a time range has been specified
-    duration = min(MAX_DURATION, request.args.get('duration', MAX_DURATION))
+    try:
+        duration = int(request.args.get('duration', MAX_DURATION))
+    except ValueError:
+        # If duration can't be parsed as an integer, that's a bad request
+        return abort(400)
+
+    # Restrict duration to the maximum we're comfortable with
+    duration = min(MAX_DURATION, duration)
     if duration < 0:
         return abort(400)
 
