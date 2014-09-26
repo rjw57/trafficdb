@@ -14,6 +14,7 @@ setup(
         # General language support
         'enum34',
         'pytz',
+        'six',
 
         # Flask webapp platform
         'flask',
