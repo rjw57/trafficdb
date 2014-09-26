@@ -54,10 +54,10 @@ def create_fake_observations(link_count=3, start=DEFAULT_START, duration=60*3, n
     # For each link, create some random observations
     obs = []
     for link_id in link_ids:
-        obs.extend(mixer.cycle(len(obs_times)).blend(
-            Observation,
-            type=ObservationType.SPEED, link_id=link_id,
-            observed_at=(t for t in obs_times)))
+        for type_ in ObservationType:
+            obs.extend(mixer.cycle(len(obs_times)).blend(
+                Observation, type=type_, link_id=link_id,
+                observed_at=(t for t in obs_times)))
     log.info('Adding {0} observation(s) to database'.format(len(obs)))
     db.session.add_all(obs)
 
