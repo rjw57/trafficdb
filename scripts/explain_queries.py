@@ -28,8 +28,6 @@ def explain_analyze(q):
     for l in db.session.execute(explain(q, analyze=True)):
         print(l[0])
 
-db.engine.echo = True
-
 # Fetch date range
 q = observation_date_range(db.session)
 print('Querying date range')

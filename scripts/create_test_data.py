@@ -24,9 +24,9 @@ db.session.commit()
 # Create test data
 print('Creating test data...')
 start_date = datetime.datetime(2012, 4, 23)
-end_date = datetime.datetime(2012, 4, 30)
+end_date = datetime.datetime(2012, 5, 10)
 duration = int((end_date - start_date).total_seconds() // 60)
-create_fake_observations(link_count=20, start=start_date, duration=duration)
+create_fake_observations(link_count=200, start=start_date, duration=duration)
 db.session.commit()
 print('Test data created')
 
