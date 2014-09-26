@@ -186,6 +186,12 @@ def observations(unverified_link_id):
         min_d, max_d = observation_date_range(db.session).one()
         start_ts = datetime_to_javascript_timestamp(
                 max_d - datetime.timedelta(milliseconds=duration))
+    else:
+        # Verify start ts is indeed an integer
+        try:
+            start_ts = int(start_ts)
+        except ValueError:
+            return abort(400)
 
     # Record parameters of sanitised query
     query_params = dict(start=start_ts, duration=duration)

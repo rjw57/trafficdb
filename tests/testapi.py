@@ -273,6 +273,19 @@ class TestSimpleQueries(TestCase):
         response = self.get_observations(link_id)
         self.validate_observations_response(link_id, response)
 
+    def test_observations_for_link_at_custom_start(self):
+        link_id = self.get_some_link_id()
+        log.info('Querying for link {0}'.format(link_id))
+
+        # Get first response
+        response = self.get_observations(link_id)
+        self.validate_observations_response(link_id, response)
+
+        # Query with start offset
+        new_start = response.json['query']['start'] - response.json['query']['duration']
+        response = self.get_observations(link_id, start=new_start)
+        self.validate_observations_response(link_id, response)
+
     def test_invalid_link_information_query(self):
         url = strip_url(API_PREFIX + '/links/10/')
         log.info('Querying for link at {0}'.format(url))
