@@ -67,6 +67,9 @@ class Link(db.Model):
 # An index to enable efficient retrieval and ordering of links by uuid.
 db.Index('ix_link_uuid', Link.uuid, unique=True)
 
+# An index to enable efficient spatial quesies for links
+db.Index('ix_link_geom', Link.geom, postgresql_using='gist')
+
 class Observation(db.Model):
     __tablename__ = 'observations'
 
