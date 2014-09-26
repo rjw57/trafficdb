@@ -170,6 +170,9 @@ def observations(unverified_link_id):
         start_ts = datetime_to_javascript_timestamp(
                 max_d - datetime.timedelta(milliseconds=duration))
 
+    # Record parameters of sanitised query
+    query_params = dict(start=start_ts, duration=duration)
+
     start_date = javascript_timestamp_to_datetime(start_ts)
     end_date = javascript_timestamp_to_datetime(start_ts + duration)
 
@@ -181,5 +184,5 @@ def observations(unverified_link_id):
             values.append((datetime_to_javascript_timestamp(obs.observed_at), obs.value))
         data[type.value] = dict(values=values)
 
-    response = dict(link=link_data, data=data)
+    response = dict(link=link_data, data=data, query=query_params)
     return jsonify(response)

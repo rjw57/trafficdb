@@ -230,7 +230,11 @@ class TestSimpleQueries(TestCase):
         #       <string>: {
         #           "values": <array of JavaScript timesamp, number pairs>,
         #       }, // ...
-        #   }
+        #   },
+        #   "query": {
+        #       "start": <number>, // Javascript time stamp
+        #       "duration": <number>, // milliseconds
+        #   },
         # }
 
         link = response.json['link']
@@ -238,7 +242,12 @@ class TestSimpleQueries(TestCase):
 
         data = response.json['data']
 
+        self.assertIn('query', response.json)
+        query = response.json['query']
+
         self.assertIn('speed', data)
+        self.assertIn('flow', data)
+        self.assertIn('occupancy', data)
 
         log.info('Returned data: {0}'.format(data))
         total_value_count = 0
@@ -248,4 +257,6 @@ class TestSimpleQueries(TestCase):
             total_value_count += len(v['values'])
             for ts, obs in v['values']:
                 self.assertTrue(ts > 0)
+                self.assertTrue(ts >= query['start'])
+                self.assertTrue(ts <= query['start'] + query['duration'])
         self.assertTrue(total_value_count > 0)
