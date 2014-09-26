@@ -7,7 +7,7 @@ try:
     from urllib.parse import urljoin, urlencode, parse_qs
 except ImportError:
     from urlparse import urljoin, parse_qs
-    from urllib import urlencodea
+    from urllib import urlencode
 import uuid
 
 from flask import *
