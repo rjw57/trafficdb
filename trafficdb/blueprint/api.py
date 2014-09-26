@@ -41,7 +41,12 @@ def datetime_to_javascript_timestamp(dt):
     return int((dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000)
 
 def uuid_to_urlsafe_id(uuid_text):
-    return str(base64.urlsafe_b64encode(uuid.UUID(uuid_text).bytes).rstrip(b'='), 'utf8')
+    id_bytes = base64.urlsafe_b64encode(uuid.UUID(uuid_text).bytes).rstrip(b'=')
+    try:
+        return str(id_bytes, 'utf8')
+    except TypeError:
+        # On python 2, str doesn't take 2 arguments so use .decode()
+        return id_bytes.decode('utf8')
 
 def urlsafe_id_to_uuid(urlsafe_id):
     if not isinstance(urlsafe_id, bytes):
