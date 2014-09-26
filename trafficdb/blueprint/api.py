@@ -97,8 +97,12 @@ def links():
 
     def row_to_dict(row):
         id_string = uuid_to_urlsafe_id(row[0])
-        properties=dict(observationsUrl=url_for(
-            '.observations', unverified_link_id=id_string, _external=True))
+        properties=dict(
+            observationsUrl=url_for(
+                '.observations', unverified_link_id=id_string, _external=True),
+            url=url_for(
+                '.link', unverified_link_id=id_string, _external=True),
+        )
         feature = dict(
             type='Feature',
             id=id_string,
@@ -132,8 +136,11 @@ def links():
     response = dict(data=feature_collection, page=page)
     return jsonify(response)
 
-@app.route('/links/<unverified_link_id>/observations')
-def observations(unverified_link_id):
+def verify_link_id(unverified_link_id):
+    """Return a primary-key, uuid pair for a link given the unverified link id
+    from a URL. Aborts with 404 if the link id is invalid or not found.
+
+    """
     # Verify link id
     try:
         link_uuid = urlsafe_id_to_uuid(unverified_link_id)
@@ -143,11 +150,18 @@ def observations(unverified_link_id):
 
     link_q = db.session.query(Link.id, Link.uuid).filter(Link.uuid == link_uuid).limit(1)
     try:
-        link_id, link_uuid = link_q.one()
+        return link_q.one()
     except NoResultFound:
         # 404 on non-existent link
         return abort(404)
 
+    # Should be unreachable
+    assert False
+
+@app.route('/links/<unverified_link_id>/observations')
+def observations(unverified_link_id):
+    # Verify link id
+    link_id, link_uuid = verify_link_id(unverified_link_id)
     link_urlsafe_id=uuid_to_urlsafe_id(link_uuid)
     link_data = dict(id=link_urlsafe_id)
 
@@ -185,4 +199,14 @@ def observations(unverified_link_id):
         data[type.value] = dict(values=values)
 
     response = dict(link=link_data, data=data, query=query_params)
+    return jsonify(response)
+
+@app.route('/links/<unverified_link_id>/')
+def link(unverified_link_id):
+    link_id, link_uuid = verify_link_id(unverified_link_id)
+    link_url_id = uuid_to_urlsafe_id(link_uuid)
+    response = dict(
+        id=link_url_id,
+        observationsUrl=url_for('.observations', unverified_link_id=link_url_id, _external=True),
+    )
     return jsonify(response)

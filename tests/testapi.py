@@ -13,6 +13,16 @@ log = logging.getLogger(__name__)
 
 API_PREFIX = '/api'
 
+def strip_url(url):
+    """Strip leading http://localhost from URLs since our client mock doesn't
+    deal with it.
+
+    """
+    prefix = 'http://localhost'
+    if url.startswith(prefix):
+        url = url[len(prefix):]
+    return url
+
 class TestApiRoot(TestCase):
     def test_api_root(self):
         response = self.client.get(API_PREFIX + '/')
@@ -147,12 +157,7 @@ class TestSimpleQueries(TestCase):
 
             n_pages += 1
             if 'next' in page:
-                # Note that we need to strip the URL since our request
-                # mock isn't clever enough to deal with it.
-                url = page['next']
-                prefix = 'http://localhost'
-                if url.startswith(prefix):
-                    url = url[len(prefix):]
+                url = strip_url(page['next'])
             else:
                 url = None
 
@@ -260,3 +265,37 @@ class TestSimpleQueries(TestCase):
                 self.assertTrue(ts >= query['start'])
                 self.assertTrue(ts <= query['start'] + query['duration'])
         self.assertTrue(total_value_count > 0)
+
+    def test_invalid_link_information_query(self):
+        url = strip_url(API_PREFIX + '/links/10/')
+        log.info('Querying for link at {0}'.format(url))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_non_existant_link_information_query(self):
+        url = strip_url(API_PREFIX + '/links/{0}/'.format('X'*22))
+        log.info('Querying for link at {0}'.format(url))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_link_information_query(self):
+        log.info('Querying first link')
+        link_feature = self.client.get(API_PREFIX + '/links/?count=1').\
+                json['data']['features'][0]
+
+        url = strip_url(link_feature['properties']['url'])
+        log.info('Querying for link at {0}'.format(url))
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.json)
+
+        # Response should look like:
+        # {
+        #   id: <string>,
+        #   observarionsUrl: <url>,
+        # }
+
+        self.assertIn('id', response.json)
+        self.assertEqual(response.json['id'], link_feature['id'])
+        self.assertIn('observationsUrl', response.json)
