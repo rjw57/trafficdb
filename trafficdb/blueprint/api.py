@@ -121,8 +121,12 @@ def links():
     links = links[:requested_count]
 
     # Form response
-    feature_collection = dict(type='FeatureCollection', features=links)
     page = dict(count = count)
+    feature_collection = dict(
+        type='FeatureCollection',
+        features=links,
+        properties=dict(page=page),
+    )
 
     # Form next url if necessary
     if next_link_id is not None:
@@ -133,8 +137,7 @@ def links():
             '?' + urlencode(next_args, doseq=True)
         )
 
-    response = dict(data=feature_collection, page=page)
-    return jsonify(response)
+    return jsonify(feature_collection)
 
 def verify_link_id(unverified_link_id):
     """Return a primary-key, uuid pair for a link given the unverified link id
