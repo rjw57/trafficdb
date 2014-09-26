@@ -65,10 +65,18 @@ def index():
 
 @app.route('/links/')
 def links():
-    requested_count = min(PAGE_LIMIT, int(request.args.get('count', PAGE_LIMIT)))
-    import logging
-    log = logging.getLogger(__name__)
-    log.info('ARGS: {0}'.format(request.args))
+    try:
+        requested_count = int(request.args.get('count', PAGE_LIMIT))
+    except ValueError:
+        # requested count was not an integer
+        return abort(400)
+
+    # Limit count to the maximum we're prepared to give
+    requested_count = min(PAGE_LIMIT, requested_count)
+
+    # Count must be +ve
+    if requested_count < 0:
+        return abort(400)
 
     # Query link objects
     links_q = db.session.query(Link.uuid, func.ST_AsGeoJSON(Link.geom)).order_by(Link.uuid)

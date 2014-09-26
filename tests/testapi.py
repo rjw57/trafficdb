@@ -63,6 +63,25 @@ class TestSimpleQueries(TestCase):
         self.assertEqual(len(links), 0)
         self.assertNotIn('next', page)
 
+    def test_negative_count(self):
+        request_count = -3
+        log.info('Querying {0} links'.format(request_count))
+        query = { 'count': request_count }
+        url = API_PREFIX + '/links/?' + urlencode(query)
+        log.info('GET {0}'.format(url))
+        response = self.client.get(url)
+        # -ve counts should return bad request
+        self.assertEqual(response.status_code, 400)
+
+    def test_non_number_vount(self):
+        request_count = 'one'
+        query = { 'count': request_count }
+        url = API_PREFIX + '/links/?' + urlencode(query)
+        log.info('GET {0}'.format(url))
+        response = self.client.get(url)
+        # non-numeric counts should return bad request
+        self.assertEqual(response.status_code, 400)
+
     def test_small_counts(self):
         from trafficdb.blueprint.api import PAGE_LIMIT
         request_count = max(1,PAGE_LIMIT >> 1)
