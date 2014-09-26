@@ -1,6 +1,7 @@
 import datetime
 import logging
 
+import pytz
 from trafficdb.models import *
 from trafficdb.queries import *
 
@@ -10,8 +11,8 @@ from .util import TestCase
 log = logging.getLogger(__name__)
 
 class TestQueries(TestCase):
-    START_DATE = datetime.datetime(2012, 4, 23)
-    END_DATE = datetime.datetime(2012, 4, 25)
+    START_DATE = datetime.datetime(2012, 4, 23, tzinfo=pytz.utc)
+    END_DATE = datetime.datetime(2012, 4, 25, tzinfo=pytz.utc)
 
     @classmethod
     def create_fixtures(cls):

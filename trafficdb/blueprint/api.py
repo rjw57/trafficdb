@@ -13,6 +13,7 @@ import uuid
 from flask import *
 from sqlalchemy import func
 from sqlalchemy.orm.exc import NoResultFound
+import pytz
 
 from trafficdb.models import *
 from trafficdb.queries import (
@@ -34,11 +35,13 @@ PAGE_LIMIT = 20
 # Maximum duration to query over in *milliseconds*
 MAX_DURATION = 3*24*60*60*1000
 
+JAVASCRIPT_EPOCH = datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)
+
 def javascript_timestamp_to_datetime(ts):
-    return datetime.datetime(1970, 1, 1) + datetime.timedelta(milliseconds=ts)
+    return JAVASCRIPT_EPOCH + datetime.timedelta(milliseconds=ts)
 
 def datetime_to_javascript_timestamp(dt):
-    return int((dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000)
+    return int((dt - JAVASCRIPT_EPOCH).total_seconds() * 1000)
 
 def uuid_to_urlsafe_id(uuid_text):
     id_bytes = base64.urlsafe_b64encode(uuid.UUID(uuid_text).bytes).rstrip(b'=')

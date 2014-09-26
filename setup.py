@@ -13,6 +13,7 @@ setup(
     install_requires=[
         # General language support
         'enum34',
+        'pytz',
 
         # Flask webapp platform
         'flask',

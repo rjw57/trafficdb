@@ -73,7 +73,7 @@ class Observation(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
     value       = db.Column(db.Float, nullable=False)
     type        = db.Column(PythonEnum(ObservationType, name='observation_types'), nullable=False)
-    observed_at = db.Column(db.DateTime, nullable=False)
+    observed_at = db.Column(db.DateTime(timezone=True), nullable=False)
     link_id     = db.Column(db.Integer, db.ForeignKey('links.id'), nullable=False)
 
 # An index to enable efficient retrieval of observations in a range.
