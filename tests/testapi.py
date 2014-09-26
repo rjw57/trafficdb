@@ -69,12 +69,12 @@ class TestSimpleQueries(TestCase):
         return self.client.get(url)
 
     def parse_links_response(self, response):
-        log.info('Querying first link')
         self.assertEqual(response.status_code, 200)
         data = response.json
         return (data['properties'], data['properties']['page'], data['features'])
 
     def get_some_link_id(self):
+        log.info('Querying first link')
         response = self.get_links(count=1)
         properties, page, links = self.parse_links_response(response)
         return links[0]['id']
@@ -172,15 +172,26 @@ class TestSimpleQueries(TestCase):
         log.info('Got information on {0} link(s)'.format(n_links))
         self.assertEqual(n_links, 104)
 
+    def get_observations(self, link_id, start=None, duration=None):
+        """Make a links query"""
+        query = {}
+        if start is not None:
+            query['start'] = start
+        if duration is not None:
+            query['duration'] = duration
+        url = API_PREFIX + '/links/{0}/observations'.format(link_id)
+        if len(query) > 0:
+            url += '?' + urlencode(query)
+        log.info('GET {0}'.format(url))
+        return self.client.get(url)
+
     def test_observations_for_non_existant_link(self):
         from trafficdb.models import db, Link
         from sqlalchemy import func
 
         # Check that non-existent link returns 404
         log.info('Querying for non-existent link')
-        url = API_PREFIX + '/links/{0}/observations'.format('X'*22)
-        log.info('GET {0}'.format(url))
-        response = self.client.get(url)
+        response = self.get_observations('X'*22)
         log.info('Got status: {0}'.format(response.status_code))
         self.assertEqual(response.status_code, 404)
 
@@ -190,9 +201,7 @@ class TestSimpleQueries(TestCase):
 
         # Check that non-existent link whose id is of the wrong format returns 404
         log.info('Querying for non-existent link')
-        url = API_PREFIX + '/links/0/observations'
-        log.info('GET {0}'.format(url))
-        response = self.client.get(url)
+        response = self.get_observations('0')
         log.info('Got status: {0}'.format(response.status_code))
         self.assertEqual(response.status_code, 404)
 
@@ -200,10 +209,7 @@ class TestSimpleQueries(TestCase):
         link_id = self.get_some_link_id()
         log.info('Querying for link {0}'.format(link_id))
 
-        url = API_PREFIX + '/links/{0}/observations'.format(link_id)
-        url = urljoin(url, '?' + urlencode(dict(duration=-2)))
-        log.info('GET {0}'.format(url))
-        response = self.client.get(url)
+        response = self.get_observations(link_id, duration=-2)
 
         # It's a bad request to request a -ve duration
         self.assertEquals(response.status_code, 400)
@@ -212,22 +218,12 @@ class TestSimpleQueries(TestCase):
         link_id = self.get_some_link_id()
         log.info('Querying for link {0}'.format(link_id))
 
-        url = API_PREFIX + '/links/{0}/observations'.format(link_id)
-        url = urljoin(url, '?' + urlencode(dict(duration='one')))
-        log.info('GET {0}'.format(url))
-        response = self.client.get(url)
+        response = self.get_observations(link_id, duration='one')
 
         # It's a bad request to request a non-numeric duration
         self.assertEquals(response.status_code, 400)
 
-    def test_observations_for_link(self):
-        link_id = self.get_some_link_id()
-        log.info('Querying for link {0}'.format(link_id))
-
-        response = self.client.get(API_PREFIX + '/links/{0}/observations'.format(link_id))
-        self.assertEquals(response.status_code, 200)
-        self.assertIsNotNone(response.json)
-
+    def validate_observations_response(self, link_id, response):
         # Response should look like:
         # {
         #   "link": {
@@ -243,6 +239,9 @@ class TestSimpleQueries(TestCase):
         #       "duration": <number>, // milliseconds
         #   },
         # }
+
+        self.assertEquals(response.status_code, 200)
+        self.assertIsNotNone(response.json)
 
         link = response.json['link']
         self.assertEqual(link['id'], link_id)
@@ -266,7 +265,13 @@ class TestSimpleQueries(TestCase):
                 self.assertTrue(ts > 0)
                 self.assertTrue(ts >= query['start'])
                 self.assertTrue(ts <= query['start'] + query['duration'])
-        self.assertTrue(total_value_count > 0)
+
+    def test_observations_for_link(self):
+        link_id = self.get_some_link_id()
+        log.info('Querying for link {0}'.format(link_id))
+
+        response = self.get_observations(link_id)
+        self.validate_observations_response(link_id, response)
 
     def test_invalid_link_information_query(self):
         url = strip_url(API_PREFIX + '/links/10/')
