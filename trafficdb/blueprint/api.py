@@ -66,6 +66,14 @@ def index():
         ),
     ))
 
+def extend_request_query(base_url, query):
+    qs = parse_qs(request.query_string)
+    for k, v in query.items():
+        if not isinstance(k, bytes):
+            k = k.encode('utf8')
+        qs[k] = [v,]
+    return urljoin(base_url, '?' + urlencode(qs, doseq=True))
+
 @app.route('/links/')
 def links():
     try:
@@ -132,9 +140,9 @@ def links():
     if next_link_id is not None:
         next_args = parse_qs(request.query_string)
         next_args['from'.encode('utf8')] = [next_link_id,]
-        page['next'] = urljoin(
+        page['next'] = extend_request_query(
             url_for('.links', _external=True),
-            '?' + urlencode(next_args, doseq=True)
+            {'from': next_link_id}
         )
 
     return jsonify(feature_collection)
@@ -195,6 +203,14 @@ def observations(unverified_link_id):
 
     # Record parameters of sanitised query
     query_params = dict(start=start_ts, duration=duration)
+    query_params['earlier'] = extend_request_query(
+        url_for('.observations', unverified_link_id=link_urlsafe_id, _external=True),
+        dict(start=start_ts-duration),
+    )
+    query_params['later'] = extend_request_query(
+        url_for('.observations', unverified_link_id=link_urlsafe_id, _external=True),
+        dict(start=start_ts+duration),
+    )
 
     start_date = javascript_timestamp_to_datetime(start_ts)
     end_date = javascript_timestamp_to_datetime(start_ts + duration)

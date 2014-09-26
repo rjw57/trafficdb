@@ -34,11 +34,11 @@ class TestQueries(TestCase):
         logging.info('Fetching observations for link {0}'.format(link_id))
         obs = observations_for_link(db.session, link_id, ObservationType.SPEED,
                 TestQueries.START_DATE, TestQueries.START_DATE + datetime.timedelta(days=1)).all()
-        self.assertEqual(len(obs), 97)
+        self.assertTrue(len(obs) >= 96)
 
     def test_multiple_link_observations(self):
         link_ids = db.session.query(Link.id).limit(3).all()
         logging.info('Using link ids: {0}'.format(link_ids))
         obs = observations_for_links(db.session, link_ids, ObservationType.SPEED,
                 TestQueries.START_DATE, TestQueries.START_DATE + datetime.timedelta(days=1)).all()
-        self.assertEqual(len(obs), 97*3)
+        self.assertTrue(len(obs) >= 96*3)

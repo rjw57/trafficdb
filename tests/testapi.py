@@ -250,6 +250,8 @@ class TestSimpleQueries(TestCase):
 
         self.assertIn('query', response.json)
         query = response.json['query']
+        self.assertIn('earlier', query)
+        self.assertIn('later', query)
 
         self.assertIn('speed', data)
         self.assertIn('flow', data)

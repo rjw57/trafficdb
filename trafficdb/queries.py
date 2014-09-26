@@ -18,7 +18,7 @@ def observations_for_links(session, link_ids, type, min_datetime, max_datetime):
     return session.query(Observation).filter_by(type=type).\
             filter(Observation.link_id.in_(link_ids)).\
             filter(Observation.observed_at >= min_datetime).\
-            filter(Observation.observed_at <= max_datetime).\
+            filter(Observation.observed_at < max_datetime).\
             order_by(Observation.link_id, Observation.observed_at)
 
 def observation_date_range(session):
