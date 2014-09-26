@@ -6,11 +6,15 @@ Database models
 __all__ = ['db', 'Link', 'Observation', 'ObservationType']
 
 from enum import Enum
+import uuid
 
 from flask import current_app as app
 from flask.ext.sqlalchemy import SQLAlchemy
 from geoalchemy2 import Geometry
-from sqlalchemy import types
+from sqlalchemy import func, types
+from sqlalchemy.dialects import postgresql as pg
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql import expression
 
 # Create app database
 db = SQLAlchemy()
@@ -37,6 +41,13 @@ class PythonEnum(types.TypeDecorator):
     def python_type(self):
         return self._enum_class
 
+class uuid_generate_v4(expression.FunctionElement):
+    type = pg.UUID()
+
+@compiles(uuid_generate_v4, 'postgresql')
+def pg_uuid_generate_v4(element, compiler, **kw):
+    return 'uuid_generate_v4()'
+
 class ObservationType(Enum):
     """Names in this enum map to names used in the database and values map to
     those exposed in API."""
@@ -48,7 +59,13 @@ class Link(db.Model):
     __tablename__ = 'links'
 
     id          = db.Column(db.Integer, primary_key=True)
+    # An opaque UUID to avoid exposing primary keys to API.
+    uuid        = db.Column(pg.UUID, server_default=uuid_generate_v4(),
+                    default=lambda: uuid.uuid4().hex, nullable=False)
     geom        = db.Column(Geometry('LINESTRING', srid=4326), nullable=False)
+
+# An index to enable efficient retrieval and ordering of links by uuid.
+db.Index('ix_link_uuid', Link.uuid, unique=True)
 
 class Observation(db.Model):
     __tablename__ = 'observations'

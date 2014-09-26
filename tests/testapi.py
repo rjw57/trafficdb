@@ -38,25 +38,29 @@ class TestSimpleQueries(TestCase):
         log.info('Total links: {0}'.format(n_links))
         self.assertEqual(n_links, 104)
 
+    def test_links_redirect(self):
+        # Non-canonical links URL should re-direct
+        url = API_PREFIX + '/links'
+        log.info('GET {0}'.format(url))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 301)
+
     def test_empty_links_document(self):
         from trafficdb.models import db, Link
         from sqlalchemy import func
 
-        max_link_id = db.session.query(func.max(Link.id)).scalar()
-        log.info('Maximum link id is: {0}'.format(max_link_id))
-
         log.info('Querying page beyond link list')
-        query = { 'from': max_link_id + 100 }
-        url = API_PREFIX + '/links?' + urlencode(query)
+        query = { 'from': '_'*22 } # This is all 1s => highest UUID
+        url = API_PREFIX + '/links/?' + urlencode(query)
+        log.info('GET {0}'.format(url))
         response = self.client.get(url)
+        self.assertEquals(response.status_code, 200)
         self.assertIsNot(response.json, None)
 
         page = response.json['page']
         links = response.json['data']['features']
 
         self.assertEqual(len(links), 0)
-        self.assertIsNone(page['first'])
-        self.assertIsNone(page['last'])
         self.assertNotIn('next', page)
 
     def test_small_counts(self):
@@ -66,7 +70,7 @@ class TestSimpleQueries(TestCase):
 
         log.info('Querying {0} links'.format(request_count))
         query = { 'count': request_count }
-        url = API_PREFIX + '/links?' + urlencode(query)
+        url = API_PREFIX + '/links/?' + urlencode(query)
         response = self.client.get(url)
         self.assertIsNot(response.json, None)
         page = response.json['page']
@@ -79,7 +83,7 @@ class TestSimpleQueries(TestCase):
 
         log.info('Querying 100 links (should be truncated)')
         query = { 'count': PAGE_LIMIT * 4 }
-        url = API_PREFIX + '/links?' + urlencode(query)
+        url = API_PREFIX + '/links/?' + urlencode(query)
         response = self.client.get(url)
         self.assertIsNot(response.json, None)
         page = response.json['page']
@@ -98,20 +102,19 @@ class TestSimpleQueries(TestCase):
         #   "data": <GeoJSON Feature collection>,
         #   "page": {
         #       "count": <number>,
-        #       "first": <number>,
-        #       "last": <number>,
         #       ?"next": <url>,
         #   },
         # }
 
         # Get all data one page at a time
-        url = API_PREFIX + '/links'
+        url = API_PREFIX + '/links/'
         while url is not None:
             # Check we're not looping "forever"
             assert n_pages < 20
 
             log.info('GET {0}'.format(url))
             response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
             self.assertIsNot(response.json, None)
 
             page = response.json['page']
@@ -121,7 +124,6 @@ class TestSimpleQueries(TestCase):
 
             n_links += len(links)
 
-            self.assertTrue(page['last'] >= page['first'])
             self.assertTrue(page['count'] == len(links))
 
             n_pages += 1
@@ -142,28 +144,28 @@ class TestSimpleQueries(TestCase):
         from trafficdb.models import db, Link
         from sqlalchemy import func
 
-        max_link_id = db.session.query(func.max(Link.id)).scalar()
-        log.info('Maximum link id is: {0}'.format(max_link_id))
-
         # Check that non-existent link returns 404
         log.info('Querying for non-existent link')
-        response = self.client.get(API_PREFIX + '/observations/{0}'.format(max_link_id + 1))
+        url = API_PREFIX + '/links/{0}/observations'.format('X'*22)
+        log.info('GET {0}'.format(url))
+        response = self.client.get(url)
         log.info('Got status: {0}'.format(response.status_code))
         self.assertEqual(response.status_code, 404)
 
     def test_observations_for_link(self):
         log.info('Querying first link')
-        link_id = self.client.get(API_PREFIX + '/links?count=1').\
+        link_id = self.client.get(API_PREFIX + '/links/?count=1').\
                 json['data']['features'][0]['id']
         log.info('Querying for link {0}'.format(link_id))
 
-        response = self.client.get(API_PREFIX + '/observations/{0}'.format(link_id))
+        response = self.client.get(API_PREFIX + '/links/{0}/observations'.format(link_id))
+        self.assertEquals(response.status_code, 200)
         self.assertIsNotNone(response.json)
 
         # Response should look like:
         # {
         #   "link": {
-        #       id: <number>,
+        #       id: <string>,
         #   },
         #   "data": {
         #       <string>: {

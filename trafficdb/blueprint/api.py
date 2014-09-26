@@ -1,15 +1,18 @@
 """API to access and modify traffic data records.
 
 """
+import base64
 import datetime
 try:
     from urllib.parse import urljoin, urlencode, parse_qs
 except ImportError:
     from urlparse import urljoin, parse_qs
-    from urllib import urlencode
+    from urllib import urlencodea
+import uuid
 
 from flask import *
 from sqlalchemy import func
+from sqlalchemy.orm.exc import NoResultFound
 
 from trafficdb.models import *
 from trafficdb.queries import (
@@ -37,6 +40,15 @@ def javascript_timestamp_to_datetime(ts):
 def datetime_to_javascript_timestamp(dt):
     return int((dt - datetime.datetime(1970, 1, 1)).total_seconds() * 1000)
 
+def uuid_to_urlsafe_id(uuid_text):
+    return str(base64.urlsafe_b64encode(uuid.UUID(uuid_text).bytes).rstrip(b'='), 'utf8')
+
+def urlsafe_id_to_uuid(urlsafe_id):
+    if not isinstance(urlsafe_id, bytes):
+        urlsafe_id = urlsafe_id.encode('utf8')
+    padding = 4 - (len(urlsafe_id) % 4)
+    return uuid.UUID(bytes=base64.urlsafe_b64decode(urlsafe_id + b'='*padding)).hex
+
 @app.route('/')
 def index():
     return jsonify(dict(
@@ -46,7 +58,7 @@ def index():
         ),
     ))
 
-@app.route('/links')
+@app.route('/links/')
 def links():
     requested_count = min(PAGE_LIMIT, int(request.args.get('count', PAGE_LIMIT)))
     import logging
@@ -54,16 +66,26 @@ def links():
     log.info('ARGS: {0}'.format(request.args))
 
     # Query link objects
-    links_q = db.session.query(Link.id, func.ST_AsGeoJSON(Link.geom)).order_by(Link.id).\
-            filter(Link.id >= request.args.get('from', 0)).\
-            limit(requested_count+1)
+    links_q = db.session.query(Link.uuid, func.ST_AsGeoJSON(Link.geom)).order_by(Link.uuid)
+
+    unverified_from_id = request.args.get('from')
+    if unverified_from_id is not None:
+        try:
+            from_uuid = urlsafe_id_to_uuid(unverified_from_id)
+        except:
+            # If from id is invalid, this is a bad request
+            return abort(400)
+        links_q = links_q.filter(Link.uuid >= from_uuid)
+
+    links_q = links_q.limit(requested_count+1)
 
     def row_to_dict(row):
+        id_string = uuid_to_urlsafe_id(row[0])
         properties=dict(observationsUrl=url_for(
-            '.observations', unverified_link_id=row[0], _external=True))
+            '.observations', unverified_link_id=id_string, _external=True))
         feature = dict(
             type='Feature',
-            id=row[0],
+            id=id_string,
             geometry=json.loads(row[1]),
             properties=properties,
         )
@@ -80,13 +102,9 @@ def links():
 
     # Form response
     feature_collection = dict(type='FeatureCollection', features=links)
-    page = dict(
-        first = links[0]['id'] if len(links) > 0 else None,
-        last = links[-1]['id'] if len(links) > 0 else None,
-        count = count,
-    )
+    page = dict(count = count)
 
-    # Form next and url
+    # Form next url if necessary
     if next_link_id is not None:
         next_args = parse_qs(request.query_string)
         next_args['from'.encode('utf8')] = [next_link_id,]
@@ -98,16 +116,24 @@ def links():
     response = dict(data=feature_collection, page=page)
     return jsonify(response)
 
-@app.route('/observations/<int:unverified_link_id>')
+@app.route('/links/<unverified_link_id>/observations')
 def observations(unverified_link_id):
     # Verify link id
-    link_id = db.session.query(Link.id).\
-        filter(Link.id == unverified_link_id).scalar()
-
-    # 404 on non-existent link
-    if link_id is None:
+    try:
+        link_uuid = urlsafe_id_to_uuid(unverified_link_id)
+    except:
+        # If the uuid is invalid, just return 404
         return abort(404)
-    link_data = dict(id=link_id)
+
+    link_q = db.session.query(Link.id, Link.uuid).filter(Link.uuid == link_uuid).limit(1)
+    try:
+        link_id, link_uuid = link_q.one()
+    except NoResultFound:
+        # 404 on non-existent link
+        return abort(404)
+
+    link_urlsafe_id=uuid_to_urlsafe_id(link_uuid)
+    link_data = dict(id=link_urlsafe_id)
 
     # Work out if a time range has been specified
     duration = min(MAX_DURATION, request.args.get('duration', MAX_DURATION))
