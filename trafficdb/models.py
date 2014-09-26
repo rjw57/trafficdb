@@ -38,9 +38,11 @@ class PythonEnum(types.TypeDecorator):
         return self._enum_class
 
 class ObservationType(Enum):
-    SPEED       = 0
-    FLOW        = 1
-    OCCUPANCY   = 2
+    """Names in this enum map to names used in the database and values map to
+    those exposed in API."""
+    SPEED       = 'speed'
+    FLOW        = 'flow'
+    OCCUPANCY   = 'occupancy'
 
 class Link(db.Model):
     __tablename__ = 'links'
