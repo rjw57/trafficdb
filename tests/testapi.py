@@ -121,6 +121,16 @@ class TestCase(BaseTestCase):
                 self.assertTrue(ts >= query['start'])
                 self.assertTrue(ts <= query['start'] + query['duration'])
 
+    def parse_links_response(self, response):
+        self.assertEqual(response.status_code, 200)
+        data = response.json
+        return (data['properties'], data['properties']['page'], data['features'])
+
+    def parse_link_aliases_response(self, response):
+        self.assertEqual(response.status_code, 200)
+        data = response.json
+        return (data['page'], data['aliases'])
+
 class TestApiRoot(TestCase):
     def test_api_root(self):
         response = self.client.get(API_PREFIX + '/')
@@ -128,6 +138,10 @@ class TestApiRoot(TestCase):
         log.info('Got response: {0}'.format(response.json))
         self.assertIn('version', response.json)
         self.assertEquals(response.json['version'], 1)
+
+        resources = response.json['resources']
+        self.assertIn('links', resources)
+        self.assertIn('linkAliases', resources)
 
 class TestSimpleQueries(TestCase):
     @classmethod
@@ -153,11 +167,6 @@ class TestSimpleQueries(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 301)
 
-    def parse_links_response(self, response):
-        self.assertEqual(response.status_code, 200)
-        data = response.json
-        return (data['properties'], data['properties']['page'], data['features'])
-
     def test_empty_links_document(self):
         log.info('Querying page beyond link list')
         response = self.get_links(
@@ -166,6 +175,11 @@ class TestSimpleQueries(TestCase):
         properties, page, links = self.parse_links_response(response)
         self.assertEqual(len(links), 0)
         self.assertNotIn('next', page)
+
+    def test_integer_from(self):
+        log.info('Querying page with integer from')
+        response = self.get_links(from_=0)
+        self.assertEqual(response.status_code, 400)
 
     def test_negative_count(self):
         request_count = -3
@@ -340,3 +354,126 @@ class TestSimpleQueries(TestCase):
         self.assertIn('id', response.json)
         self.assertEqual(response.json['id'], link_feature['id'])
         self.assertIn('observationsUrl', response.json)
+
+class TestLinkAliases(TestCase):
+    @classmethod
+    def create_fixtures(cls):
+        create_fake_links(link_count=100)
+        create_fake_link_aliases(alias_count=200)
+
+    def test_all_link_aliass(self):
+        log.info('Querying all link aliases')
+        n_aliases = 0
+        n_pages = 0
+
+        # Response should look like a JSON document of the following form:
+        # {
+        #   "aliases": [
+        #       {
+        #           id: <string>,
+        #           linkId: <string>,
+        #           linkUrl: <url>,
+        #       }
+        #   ],
+        #   "page": {
+        #       "count": <number>,
+        #       ?"next": <url>,
+        #   },
+        # }
+
+        # Get all data one page at a time
+        url = API_PREFIX + '/linkaliases/'
+        while url is not None:
+            # Check we're not looping "forever"
+            assert n_pages < 20
+
+            log.info('GET {0}'.format(url))
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertIsNot(response.json, None)
+
+            self.assertIn('aliases', response.json)
+            self.assertIn('page', response.json)
+
+            aliases = response.json['aliases']
+            page = response.json['page']
+
+            log.info('Got {0} aliases'.format(len(aliases)))
+            log.info('Page structure: {0}'.format(page))
+
+            # Check each alias
+            for v in aliases:
+                self.assertIn('id', v)
+                self.assertIn('linkId', v)
+                self.assertIn('linkUrl', v)
+
+            n_aliases += len(aliases)
+
+            self.assertTrue(page['count'] == len(aliases))
+
+            n_pages += 1
+            if 'next' in page:
+                url = strip_url(page['next'])
+            else:
+                url = None
+
+        log.info('Got information on {0} alias(es)'.format(n_aliases))
+        self.assertEqual(n_aliases, 200)
+
+    def test_redirect(self):
+        # Non-canonical links URL should re-direct
+        url = API_PREFIX + '/linkaliases'
+        log.info('GET {0}'.format(url))
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 301)
+
+    def test_empty_document(self):
+        log.info('Querying page beyond alias maximum')
+        # rationale: using the highest ASCII code point should be "above" any
+        # random link alias in the db.
+        response = self.get_link_aliases(from_='\u00ff')
+        page, aliases = self.parse_link_aliases_response(response)
+        self.assertEqual(len(aliases), 0)
+        self.assertNotIn('next', page)
+
+    def test_integer_from(self):
+        # In the case of aliases, names can be just about anything and
+        # so they could be an integer.
+        log.info('Querying page with integer from')
+        response = self.get_link_aliases(from_=0)
+        page, aliases = self.parse_link_aliases_response(response)
+
+    def test_negative_count(self):
+        request_count = -3
+        log.info('Querying {0} aliases'.format(request_count))
+        response = self.get_link_aliases(count=request_count)
+        # -ve counts should return bad request
+        self.assertEqual(response.status_code, 400)
+
+    def test_non_number_count(self):
+        request_count = 'one'
+        log.info('Querying {0} aliases'.format(request_count))
+        response = self.get_link_aliases(count=request_count)
+        # non-numeric counts should return bad request
+        self.assertEqual(response.status_code, 400)
+
+    def test_small_counts(self):
+        from trafficdb.blueprint.api import PAGE_LIMIT
+        request_count = max(1,PAGE_LIMIT >> 1)
+        assert PAGE_LIMIT > request_count
+
+        log.info('Querying {0} aliases'.format(request_count))
+        response = self.get_link_aliases(count=request_count)
+        page, aliases = self.parse_link_aliases_response(response)
+        self.assertEqual(len(aliases), request_count)
+        self.assertEqual(len(aliases), page['count'])
+
+    def test_huge_counts(self):
+        from trafficdb.blueprint.api import PAGE_LIMIT
+        log.info('Querying 100 aliases (should be truncated)')
+        request_count = PAGE_LIMIT * 4
+        log.info('Querying {0} aliases'.format(request_count))
+        response = self.get_link_aliases(count=request_count)
+        page, aliases = self.parse_link_aliases_response(response)
+        self.assertEqual(len(aliases), page['count'])
+        self.assertTrue(len(aliases) == PAGE_LIMIT)

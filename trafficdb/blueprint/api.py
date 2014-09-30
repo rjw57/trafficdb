@@ -63,6 +63,7 @@ def index():
         version=1,
         resources=dict(
             links=url_for('.links', _external=True),
+            linkAliases=url_for('.link_aliases', _external=True),
         ),
     ))
 
@@ -241,3 +242,56 @@ def link(unverified_link_id):
         aliases=aliases,
     )
     return jsonify(response)
+
+@app.route('/linkaliases/')
+def link_aliases():
+    try:
+        requested_count = int(request.args.get('count', PAGE_LIMIT))
+    except ValueError:
+        # requested count was not an integer
+        return abort(400)
+
+    # Limit count to the maximum we're prepared to give
+    requested_count = min(PAGE_LIMIT, requested_count)
+
+    # Count must be +ve
+    if requested_count < 0:
+        return abort(400)
+
+    # Query link objects
+    aliases_q = db.session.query(LinkAlias.name, Link.uuid).join(Link).\
+        order_by(LinkAlias.name)
+
+    from_id = request.args.get('from', None)
+    if from_id is not None:
+        aliases_q = aliases_q.filter(LinkAlias.name >= str(from_id))
+
+    aliases_q = aliases_q.limit(requested_count+1)
+
+    def row_to_item(row):
+        link_id = uuid_to_urlsafe_id(row[1])
+        link_url = url_for('.link', unverified_link_id=link_id, _external=True)
+        return dict(id=row[0], linkId=link_id, linkUrl=link_url)
+
+    aliases = list(row_to_item(l) for l in aliases_q)
+
+    # How many aliases to return and do we still have more?
+    count = min(requested_count, len(aliases))
+
+    # Limit size of output
+    next_link_id = aliases[requested_count]['id'] if len(aliases) > requested_count else None
+    aliases = aliases[:requested_count]
+
+    # Form response
+    page = dict(count = count)
+
+    # Form next url if necessary
+    if next_link_id is not None:
+        next_args = parse_qs(request.query_string)
+        next_args['from'.encode('utf8')] = [next_link_id,]
+        page['next'] = extend_request_query(
+            url_for('.link_aliases', _external=True),
+            {'from': next_link_id}
+        )
+
+    return jsonify(dict(aliases=aliases, page=page))

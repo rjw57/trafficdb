@@ -20,6 +20,9 @@ app = create_app()
 # Setup mixer
 mixer.init_app(app)
 
+# Switch on logging for sqlalchemy
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+
 class TestCase(FlaskTestCase):
     """flask.ext.testing.TestCase subclass which sets up our mock testing
     database and takes care of clearing it and re-initialising before each
@@ -38,22 +41,16 @@ class TestCase(FlaskTestCase):
             # Delete any data initially present
             drop_all_data()
 
-            # Create fixtures
+            # Create fixtures with logging temporarily disabled
             cls.create_fixtures()
             db.session.commit()
 
     def setUp(self):
-        # Switch on logging
-        db.engine.echo = True
-
         # Start transaction
         db.session.begin_nested()
 
     def tearDown(self):
         db.session.rollback() # If the previous transaction failed
-
-        # Switch off logging
-        db.engine.echo = False
 
     @classmethod
     def create_fixtures(cls):
