@@ -33,6 +33,7 @@ q = observation_date_range(db.session)
 print('Querying date range')
 explain_analyze(q)
 start_date, end_date = q.first()
+print('Start/end: {0}/{1}'.format(start_date, end_date))
 
 # Fetch observations for random link
 link_id = db.session.query(Link.id).limit(1).first().id
