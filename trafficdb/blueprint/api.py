@@ -230,8 +230,14 @@ def observations(unverified_link_id):
 def link(unverified_link_id):
     link_id, link_uuid = verify_link_id(unverified_link_id)
     link_url_id = uuid_to_urlsafe_id(link_uuid)
+
+    # Query aliases
+    aliases = list(r[0] for r in
+            db.session.query(LinkAlias.name).filter(LinkAlias.link_id==link_id))
+
     response = dict(
         id=link_url_id,
         observationsUrl=url_for('.observations', unverified_link_id=link_url_id, _external=True),
+        aliases=aliases,
     )
     return jsonify(response)
