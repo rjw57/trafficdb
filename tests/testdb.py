@@ -4,7 +4,10 @@ from mixer.backend.flask import mixer
 
 from trafficdb.models import *
 
-from .fixtures import create_fake_observations
+from .fixtures import (
+    create_fake_observations, create_fake_links,
+    create_fake_link_aliases
+)
 from .util import TestCase, raises_integrity_error
 
 log = logging.getLogger(__name__)
@@ -59,3 +62,34 @@ class TestRealisticData(TestCase):
         obs.link_id = -1
         db.session.add(obs)
         db.session.commit()
+
+class TestLinkAliases(TestCase):
+    @classmethod
+    def create_fixtures(cls):
+        create_fake_links(link_count=50)
+        create_fake_link_aliases(alias_count=30)
+
+    def test_links_created(self):
+        link_ids = set(db.session.query(Link.id))
+        self.assertEqual(len(link_ids), 50)
+
+    def test_aliases_created(self):
+        alias_ids = set(db.session.query(LinkAlias.id))
+        self.assertEqual(len(alias_ids), 30)
+
+    def test_aliases_have_link(self):
+        n_aliases = 0
+        for alias in db.session.query(LinkAlias):
+            self.assertIsNotNone(alias.link)
+            n_aliases += 1
+        self.assertEqual(n_aliases, 30)
+
+    def test_aliases_have_link_via_join(self):
+        link_q = db.session.query(LinkAlias.name, Link.uuid).join(Link).order_by(LinkAlias.name)
+        n_aliases = 0
+        for alias_name, link_uuid in link_q:
+            self.assertIsNotNone(alias_name)
+            self.assertIsNotNone(link_uuid)
+            n_aliases += 1
+        self.assertEqual(n_aliases, 30)
+

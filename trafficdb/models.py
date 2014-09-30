@@ -3,7 +3,12 @@ Database models
 ===============
 """
 
-__all__ = ['db', 'Link', 'Observation', 'ObservationType']
+__all__ = ['db',
+    'Link',
+    'LinkAlias',
+    'Observation',
+    'ObservationType'
+]
 
 from enum import Enum
 import uuid
@@ -84,3 +89,19 @@ db.Index('ix_observation_observed_at', Observation.observed_at)
 
 # An index to enable efficient retrieval of observations in a range and link.
 db.Index('ix_observation_observed_at_link_id', Observation.observed_at, Observation.link_id)
+
+class LinkAlias(db.Model):
+    __tablename__ = 'link_aliases'
+
+    id          = db.Column(db.Integer, primary_key=True)
+    name        = db.Column(db.String, nullable=False, unique=True)
+    link_id     = db.Column(db.Integer, db.ForeignKey('links.id'), nullable=False)
+
+    # Relations
+    link        = db.relationship(Link)
+
+# An index to enable efficient retrieval of aliases by name
+db.Index('is_link_aliases_name', LinkAlias.name, unique=True)
+
+# An index to enable efficient retrieval of aliases for a link
+db.Index('ix_link_aliases_link_id', LinkAlias.link_id)

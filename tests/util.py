@@ -61,5 +61,6 @@ class TestCase(FlaskTestCase):
 
 def drop_all_data():
     db.session.query(Observation).delete()
+    db.session.query(LinkAlias).delete()
     db.session.query(Link).delete()
 

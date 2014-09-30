@@ -3,6 +3,8 @@ import logging
 import random
 
 from mixer.backend.flask import Mixer
+import mixer.fakers as mxfake
+import mixer.generators as mxgen
 import pytz
 from six.moves import range
 
@@ -12,8 +14,7 @@ log = logging.getLogger(__name__)
 
 DEFAULT_START = datetime.datetime(2013, 4, 29, tzinfo=pytz.utc)
 
-def create_fake_observations(link_count=3, start=DEFAULT_START, duration=60*3, node_count=None):
-    """Create a set of fake observations in the database."""
+def create_fake_links(link_count=3, node_count=None):
     # Default node count
     node_count = node_count or max(4, (link_count >> 1))
 
@@ -43,6 +44,14 @@ def create_fake_observations(link_count=3, start=DEFAULT_START, duration=60*3, n
     links = mixer.cycle(link_count).blend(Link, geom=link_geoms)
     db.session.add_all(links)
 
+def create_fake_observations(link_count=3, start=DEFAULT_START, duration=60*3, node_count=None):
+    """Create a set of fake observations in the database."""
+
+    create_fake_links(link_count=link_count, node_count=node_count)
+
+    # Disable auto-add to db for mixer
+    mixer = Mixer(commit=False)
+
     # Extract ids
     link_ids = set(db.session.query(Link.id))
 
@@ -61,3 +70,21 @@ def create_fake_observations(link_count=3, start=DEFAULT_START, duration=60*3, n
     log.info('Adding {0} observation(s) to database'.format(len(obs)))
     db.session.add_all(obs)
 
+def create_fake_link_aliases(alias_count=10):
+    """Create a set of fake aliases for links.
+
+    Requires a set of links in the database to exist.
+
+    """
+    # Disable auto-add to db for mixer
+    mixer = Mixer(commit=False)
+
+    # Extract link ids
+    link_ids = set(db.session.query(Link.id))
+
+    aliases = mixer.cycle(alias_count).blend(LinkAlias,
+        name=mxfake.gen_slug(),
+        link_id=mxgen.gen_choice(list(link_ids)),
+        link=None)
+    log.info('Adding {0} aliases to db'.format(len(aliases)))
+    db.session.add_all(aliases)
