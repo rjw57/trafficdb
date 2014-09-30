@@ -429,9 +429,9 @@ class TestLinkAliases(TestCase):
 
     def test_empty_document(self):
         log.info('Querying page beyond alias maximum')
-        # rationale: using the highest ASCII code point should be "above" any
-        # random link alias in the db.
-        response = self.get_link_aliases(from_='\xff')
+        # rationale: using "Z" should be "above" any
+        # random link alias in the db given the ordering used by Postgres.
+        response = self.get_link_aliases(from_='Z')
         page, aliases = self.parse_link_aliases_response(response)
         self.assertEqual(len(aliases), 0)
         self.assertNotIn('next', page)
