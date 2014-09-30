@@ -431,7 +431,7 @@ class TestLinkAliases(TestCase):
         log.info('Querying page beyond alias maximum')
         # rationale: using the highest ASCII code point should be "above" any
         # random link alias in the db.
-        response = self.get_link_aliases(from_='\u00ff')
+        response = self.get_link_aliases(from_='\xff')
         page, aliases = self.parse_link_aliases_response(response)
         self.assertEqual(len(aliases), 0)
         self.assertNotIn('next', page)
