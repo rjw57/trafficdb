@@ -207,6 +207,7 @@ def patch_links():
         return dict(id=id, url=url_for('.link', unverified_link_id=id, _external=True))
     create_responses = list(make_create_response(l) for l in created_links)
 
+    db.session.commit()
     response = dict(create=create_responses)
     return jsonify(response)
 
