@@ -34,40 +34,47 @@ def observation_date_range(session):
     return session.query(func.min(Observation.observed_at),
         func.max(Observation.observed_at))
 
-def resolve_link_aliases(session, aliases):
-    """
-    Given a sequence of link aliases, return a query, session pair.
-
-    The query yields a corresponding table (name,
-    link_id) of alias names and link ids with NULLs for invalid aliases.a
-
-    The session is one with a temporary table created within it. If you need to
-    access this table, use the returned session.
+def prepare_resolve_link_aliases(session):
+    """Must be called once before resolve_link_aliases in order to create a
+    temporary table used by that query. Pass the return value from this
+    function into resolve_link_aliases.
 
     """
-
-    session = session.session_factory()
-    metadata = MetaData()
-
-    # Note that we give the table a random uuid-based name to avoid collisions
-    # with multiple runs of this function.
-    class _LinkAliasNames(declarative_base(bind=session.bind, metadata=metadata)):
-        __tablename__ = 'tmp_link_alias_names_' + uuid.uuid4().hex
+    class ResolveNames(declarative_base(metadata=MetaData())):
+        __tablename__ = 'tmp_link_alias_names'
         __table_args__ = {'prefixes': ['TEMPORARY']}
         name = db.Column(db.String, primary_key=True)
 
     # Create or temporary table to hold list of aliases
-    metadata.create_all(bind=session.bind, tables=[_LinkAliasNames.__table__])
+    try:
+        ResolveNames.__table__.create(bind=session.bind)
+    except exc.ProgrammingError:
+        # HACK: This exception is raised if the table already exists, an
+        # event which we silently swallow.
+        pass
 
-    #session.execute(_LinkAliasNames.__table__.create())
+    return ResolveNames
 
-    # Insert list of aliases
-    session.execute(_LinkAliasNames.__table__.insert(values=list({'name': a} for a in aliases)))
+def resolve_link_aliases(session, aliases, temp_table):
+    """
+    Given a sequence of link aliases, return a query.
+
+    The query yields a corresponding table (name,
+    link_id, link_uuid) of alias names and link ids with NULLs for invalid aliases.a
+
+    NOTE: prepare_resolve_link_aliases() must have been called once in this
+    session before resolve_link_aliases is called.
+
+    """
+    # Insert list of aliases into DB temporary table
+    session.query(temp_table).delete()
+    if len(aliases) > 0:
+        session.execute(temp_table.__table__.insert(values=list({'name': a} for a in aliases)))
 
     # Form query
-    sub_q = session.query(LinkAlias.name, Link.id).join(Link).subquery()
-    q = session.query(_LinkAliasNames.name, sub_q.c.id).\
-            select_from(_LinkAliasNames).\
-            outerjoin(sub_q, _LinkAliasNames.name == sub_q.c.name)
+    sub_q = session.query(LinkAlias.name, Link.id, Link.uuid).join(Link).subquery()
+    q = session.query(temp_table.name, sub_q.c.id, sub_q.c.uuid).\
+            select_from(temp_table).\
+            outerjoin(sub_q, temp_table.name == sub_q.c.name)
 
-    return q, session
+    return q

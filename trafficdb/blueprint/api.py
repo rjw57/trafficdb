@@ -11,6 +11,7 @@ except ImportError:
 import uuid
 
 from flask import *
+import six
 from sqlalchemy import func
 from sqlalchemy.orm.exc import NoResultFound
 import pytz
@@ -18,7 +19,9 @@ import pytz
 from trafficdb.models import *
 from trafficdb.queries import (
         observation_date_range,
-        observations_for_link
+        observations_for_link,
+        prepare_resolve_link_aliases,
+        resolve_link_aliases,
 )
 
 __all__ = ['api']
@@ -295,3 +298,34 @@ def link_aliases():
         )
 
     return jsonify(dict(aliases=aliases, page=page))
+
+@app.route('/linkaliases/resolve', methods=['POST'])
+def link_aliases_resolve():
+    # Request body should be JSON
+    req_body = request.get_json()
+    if req_body is None:
+        return abort(400)
+
+    # Retrieve and sanitise alias list
+    try:
+        aliases = req_body['aliases']
+    except KeyError:
+        return abort(400)
+    if not isinstance(aliases, list):
+        return abort(400)
+    if len(aliases) > PAGE_LIMIT:
+        return abort(400)
+    if any(not isinstance(a, six.string_types) for a in aliases):
+        return abort(400)
+
+    def link_from_uuid(link_uuid):
+        if link_uuid is None:
+            return None
+        link_id = uuid_to_urlsafe_id(link_uuid)
+        return dict(id=link_id, url=url_for('.link', unverified_link_id=link_id, _external=True))
+
+    tmp_table = prepare_resolve_link_aliases(db.session)
+    q = resolve_link_aliases(db.session, aliases, tmp_table)
+    resolutions = list((r[0], link_from_uuid(r[2])) for r in q)
+    response = dict(resolutions=resolutions)
+    return jsonify(response)

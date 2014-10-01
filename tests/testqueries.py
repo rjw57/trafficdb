@@ -53,13 +53,17 @@ class TestLinkAlias(TestCase):
         create_fake_links(link_count=10)
         create_fake_link_aliases(alias_count=5)
 
+    def setUp(self):
+        super(TestLinkAlias, self).setUp()
+        self.tmp_table = prepare_resolve_link_aliases(db.session)
+
     def test_link_alias_query(self):
         alias_names = list(r[0] for r in \
             db.session.query(LinkAlias.name).order_by(func.random()).limit(2).all())
         alias_names.extend(['_invalid1', '_invalid2'])
         log.info('Resolving aliases: {0}'.format(alias_names))
 
-        q, _ = resolve_link_aliases(db.session, alias_names)
+        q = resolve_link_aliases(db.session, alias_names, self.tmp_table)
         self.assertEqual(q.count(), len(alias_names))
 
         for alias, row in zip(alias_names, q):
@@ -69,6 +73,12 @@ class TestLinkAlias(TestCase):
                 self.assertIsNone(row[1])
             else:
                 self.assertIsNotNone(row[1])
+
+    def test_empty_link_alias_query(self):
+        alias_names = []
+        log.info('Resolving aliases: {0}'.format(alias_names))
+        q = resolve_link_aliases(db.session, alias_names, self.tmp_table)
+        self.assertEqual(q.count(), len(alias_names))
 
     def test_multiple_link_alias_query(self):
         # Check that running a query twice does not result in confusion with
@@ -79,7 +89,7 @@ class TestLinkAlias(TestCase):
         alias_names.extend(['_invalid1', '_invalid2'])
         log.info('Resolving aliases: {0}'.format(alias_names))
 
-        q, _ = resolve_link_aliases(db.session, alias_names)
+        q = resolve_link_aliases(db.session, alias_names, self.tmp_table)
         self.assertEqual(q.count(), len(alias_names))
 
         for alias, row in zip(alias_names, q):
@@ -90,7 +100,7 @@ class TestLinkAlias(TestCase):
             else:
                 self.assertIsNotNone(row[1])
 
-        q, _ = resolve_link_aliases(db.session, alias_names)
+        q = resolve_link_aliases(db.session, alias_names, self.tmp_table)
         self.assertEqual(q.count(), len(alias_names))
 
         for alias, row in zip(alias_names, q):
