@@ -5,7 +5,12 @@ Query helper functions
 These queries are optimised to use available indices.
 
 """
-from sqlalchemy import func
+import uuid
+
+from sqlalchemy import exc, func
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.schema import MetaData
+
 from .models import *
 
 def observations_for_link(session, link_id, type, min_datetime, max_datetime):
@@ -28,3 +33,39 @@ def observation_date_range(session):
     """
     return session.query(func.min(Observation.observed_at),
         func.max(Observation.observed_at))
+
+def resolve_link_aliases(session, aliases):
+    """
+    Given a sequence of link aliases, return a query, session pair.
+
+    The query yields a corresponding table (name,
+    link_id) of alias names and link ids with NULLs for invalid aliases.a
+
+    The session is one with a temporary table created within it. If you need to
+    access this table, use the returned session.
+
+    """
+
+    session = session.session_factory()
+    metadata = MetaData()
+
+    class _LinkAliasNames(declarative_base(bind=session.bind, metadata=metadata)):
+        __tablename__ = 'tmp_link_alias_names'
+        __table_args__ = {'prefixes': ['TEMPORARY']}
+        name = db.Column(db.String, primary_key=True)
+
+    # Create or temporary table to hold list of aliases
+    metadata.create_all(bind=session.bind, tables=[_LinkAliasNames.__table__])
+
+    #session.execute(_LinkAliasNames.__table__.create())
+
+    # Insert list of aliases
+    session.execute(_LinkAliasNames.__table__.insert(values=list({'name': a} for a in aliases)))
+
+    # Form query
+    sub_q = session.query(LinkAlias.name, Link.id).join(Link).subquery()
+    q = session.query(_LinkAliasNames.name, sub_q.c.id).\
+            select_from(_LinkAliasNames).\
+            outerjoin(sub_q, _LinkAliasNames.name == sub_q.c.name)
+
+    return q, session
