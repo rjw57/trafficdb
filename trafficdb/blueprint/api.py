@@ -15,6 +15,7 @@ import six
 from sqlalchemy import func
 from sqlalchemy.orm.exc import NoResultFound
 import pytz
+from werkzeug.exceptions import NotFound
 
 from trafficdb.models import *
 from trafficdb.queries import (
@@ -59,6 +60,28 @@ def urlsafe_id_to_uuid(urlsafe_id):
         urlsafe_id = urlsafe_id.encode('utf8')
     padding = 4 - (len(urlsafe_id) % 4)
     return uuid.UUID(bytes=base64.urlsafe_b64decode(urlsafe_id + b'='*padding)).hex
+
+def verify_link_id(unverified_link_id):
+    """Return a Link given the unverified link id from a URL. Aborts with 404
+    if the link id is invalid or not found.
+
+    """
+    # Verify link id
+    try:
+        link_uuid = urlsafe_id_to_uuid(unverified_link_id)
+    except:
+        # If the uuid is invalid, just return 404
+        return abort(404)
+
+    link_q = db.session.query(Link.id, Link.uuid).filter(Link.uuid == link_uuid).limit(1)
+    try:
+        return link_q.one()
+    except NoResultFound:
+        # 404 on non-existent link
+        raise NotFound()
+
+    # Should be unreachable
+    assert False
 
 @app.route('/')
 def index():
@@ -151,27 +174,41 @@ def links():
 
     return jsonify(feature_collection)
 
-def verify_link_id(unverified_link_id):
-    """Return a primary-key, uuid pair for a link given the unverified link id
-    from a URL. Aborts with 404 if the link id is invalid or not found.
+@app.route('/links/', methods=['PATCH'])
+def patch_links():
+    # Get request body as JSON document
+    body = request.get_json()
 
-    """
-    # Verify link id
+    # Sanitise body
+    if body is None:
+        return abort(400)
+    if not isinstance(body, dict):
+        return abort(400)
+
+    # Extract create requests
     try:
-        link_uuid = urlsafe_id_to_uuid(unverified_link_id)
-    except:
-        # If the uuid is invalid, just return 404
-        return abort(404)
+        create_requests = body['create']
+    except KeyError:
+        create_requests = []
+    if not isinstance(create_requests, list) or len(create_requests) > PAGE_LIMIT:
+        return abort(400)
 
-    link_q = db.session.query(Link.id, Link.uuid).filter(Link.uuid == link_uuid).limit(1)
-    try:
-        return link_q.one()
-    except NoResultFound:
-        # 404 on non-existent link
-        return abort(404)
+    # Process create requests
+    created_links = []
+    for r in create_requests:
+        geom_geojson = json.dumps(dict(type='LineString', coordinates=r['coordinates']))
+        created_links.append(Link(
+            uuid=uuid.uuid4().hex,
+            geom=func.ST_SetSRID(func.ST_GeomFromGeoJSON(geom_geojson), 4326)))
+    db.session.add_all(created_links)
 
-    # Should be unreachable
-    assert False
+    def make_create_response(l):
+        id = uuid_to_urlsafe_id(l.uuid)
+        return dict(id=id, url=url_for('.link', unverified_link_id=id, _external=True))
+    create_responses = list(make_create_response(l) for l in created_links)
+
+    response = dict(create=create_responses)
+    return jsonify(response)
 
 @app.route('/links/<unverified_link_id>/observations')
 def observations(unverified_link_id):
@@ -239,10 +276,19 @@ def link(unverified_link_id):
     aliases = list(r[0] for r in
             db.session.query(LinkAlias.name).filter(LinkAlias.link_id==link_id))
 
+    # Query geometry
+    geom = json.loads(
+        db.session.query(func.ST_AsGeoJSON(Link.geom)).filter(Link.id==link_id).one()[0]
+    )
+
     response = dict(
+        type='Feature',
         id=link_url_id,
-        observationsUrl=url_for('.observations', unverified_link_id=link_url_id, _external=True),
-        aliases=aliases,
+        geometry=geom,
+        properties=dict(
+            observationsUrl=url_for('.observations', unverified_link_id=link_url_id, _external=True),
+            aliases=aliases,
+        ),
     )
     return jsonify(response)
 

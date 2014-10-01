@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 
 from sqlalchemy import func
@@ -132,6 +133,14 @@ class TestIndex(TestCase):
         log.info('Got information on {0} link(s)'.format(n_links))
         self.assertEqual(n_links, 104)
 
+class TestSingleLink(TestCase):
+    @classmethod
+    def create_fixtures(cls):
+        start_date = datetime.datetime(2013, 9, 10)
+
+        # NOTE: total links is 20
+        create_fake_observations(link_count=20, start=start_date, duration=60)
+
     def test_invalid_link_information_query(self):
         url = strip_url(API_PREFIX + '/links/10/')
         log.info('Querying for link at {0}'.format(url))
@@ -158,9 +167,89 @@ class TestIndex(TestCase):
         # Response should look like:
         # {
         #   id: <string>,
-        #   observarionsUrl: <url>,
+        #   type: "Feature",
+        #   geometry: {
+        #       type: "LineString",
+        #       coordinates: <array of co-ordinates>,
+        #   },
+        #   properties: {
+        #       observationsUrl: <url>,
+        #       aliases: <array of string>,
+        #   },
         # }
-
+        self.assertIn('properties', response.json)
+        self.assertIn('type', response.json)
+        self.assertIn('geometry', response.json)
         self.assertIn('id', response.json)
-        self.assertEqual(response.json['id'], link_feature['id'])
-        self.assertIn('observationsUrl', response.json)
+
+        id, type, geometry, properties = tuple(
+                response.json[x] for x in ('id', 'type', 'geometry', 'properties'))
+        self.assertEqual(type, 'Feature')
+
+        self.assertEqual(id, link_feature['id'])
+        self.assertEqual(geometry['type'], 'LineString')
+        self.assertIn('coordinates', geometry)
+
+        self.assertIn('observationsUrl', properties)
+        self.assert_200(self.client.get(strip_url(properties['observationsUrl'])))
+
+LINKS_PATH = API_PREFIX + '/links/'
+
+class TestMutation(TestCase):
+    @classmethod
+    def create_fixtures(cls):
+        create_fake_links(link_count=20)
+
+    def new_link_request(self, link_data):
+        return self.client.patch(LINKS_PATH,
+                data=json.dumps(link_data),
+                content_type='application/json')
+
+    def test_empty_body_request(self):
+        response = self.client.patch(LINKS_PATH, data='', content_type='application/json')
+        self.assert_400(response)
+
+    def test_non_json_body_request(self):
+        response = self.client.patch(LINKS_PATH, data='not json', content_type='application/json')
+        self.assert_400(response)
+
+    def test_no_content_type_body_request(self):
+        response = self.client.patch(LINKS_PATH, data='{}')
+        self.assert_400(response)
+
+    def test_empty_request(self):
+        response = self.new_link_request({})
+        self.assert_200(response)
+
+    def verify_create(self, create, response):
+        self.assert_200(response)
+        self.assertIn('create', response.json)
+        create_resp = response.json['create']
+        self.assertEqual(len(create_resp), len(create))
+
+        for req, link in zip(create, create_resp):
+            self.assertIn('id', link)
+            self.assertIn('url', link)
+            url = strip_url(link['url'])
+            link_resp = self.client.get(url)
+            self.assert_200(link_resp)
+            link_coords = link_resp.json['geometry']['coordinates']
+            self.assertEqual(link_coords, req['coordinates'])
+
+    def test_create_single(self):
+        create = [
+            {
+                'coordinates': [[-3, 46], [-2,47], [-1,48]],
+            },
+        ]
+        response = self.new_link_request(dict(create=create))
+        self.verify_create(create, response)
+
+    def test_create_multiple(self):
+        create = [
+            { 'coordinates': [[-3, 46], [-2,47], [-1,48]], },
+            { 'coordinates': [[-8, 46], [-2,47], [-1,48]], },
+            { 'coordinates': [[-3, 36], [-2,67], [-0,18]], },
+        ]
+        response = self.new_link_request(dict(create=create))
+        self.verify_create(create, response)
