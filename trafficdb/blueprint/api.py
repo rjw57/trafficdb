@@ -246,7 +246,7 @@ def link(unverified_link_id):
     )
     return jsonify(response)
 
-@app.route('/linkaliases/')
+@app.route('/aliases/')
 def link_aliases():
     try:
         requested_count = int(request.args.get('count', PAGE_LIMIT))
@@ -299,7 +299,7 @@ def link_aliases():
 
     return jsonify(dict(aliases=aliases, page=page))
 
-@app.route('/linkaliases/resolve', methods=['POST'])
+@app.route('/aliases/resolve', methods=['POST'])
 def link_aliases_resolve():
     # Request body should be JSON
     req_body = request.get_json()

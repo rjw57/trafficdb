@@ -42,7 +42,7 @@ class TestLinkAliases(TestCase):
         # }
 
         # Get all data one page at a time
-        url = API_PREFIX + '/linkaliases/'
+        url = API_PREFIX + '/aliases/'
         while url is not None:
             # Check we're not looping "forever"
             assert n_pages < 20
@@ -82,7 +82,7 @@ class TestLinkAliases(TestCase):
 
     def test_redirect(self):
         # Non-canonical links URL should re-direct
-        url = API_PREFIX + '/linkaliases'
+        url = API_PREFIX + '/aliases'
         log.info('GET {0}'.format(url))
         response = self.client.get(url)
         self.assertEqual(response.status_code, 301)
@@ -137,27 +137,27 @@ class TestLinkAliases(TestCase):
         self.assertTrue(len(aliases) == PAGE_LIMIT)
 
     def test_non_json_resolve_body(self):
-        response = self.client.post(API_PREFIX + '/linkaliases/resolve',
+        response = self.client.post(API_PREFIX + '/aliases/resolve',
                 data='not a json document', content_type='application/json')
         self.assert_400(response)
 
     def test_empty_json_resolve_body(self):
-        response = self.client.post(API_PREFIX + '/linkaliases/resolve',
+        response = self.client.post(API_PREFIX + '/aliases/resolve',
                 data='{}', content_type='application/json')
         self.assert_400(response)
 
     def test_bad_alias_list_resolve_body_1(self):
-        response = self.client.post(API_PREFIX + '/linkaliases/resolve',
+        response = self.client.post(API_PREFIX + '/aliases/resolve',
                 data='{"aliases": 3}', content_type='application/json')
         self.assert_400(response)
 
     def test_bad_alias_list_resolve_body_1(self):
-        response = self.client.post(API_PREFIX + '/linkaliases/resolve',
+        response = self.client.post(API_PREFIX + '/aliases/resolve',
                 data='{"aliases": ["one", 3]}', content_type='application/json')
         self.assert_400(response)
 
     def test_bad_content_type_resolve_body(self):
-        response = self.client.post(API_PREFIX + '/linkaliases/resolve',
+        response = self.client.post(API_PREFIX + '/aliases/resolve',
                 data='{"aliases": []}', content_type='text/plain')
         self.assert_400(response)
 

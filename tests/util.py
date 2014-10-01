@@ -124,7 +124,7 @@ class ApiTestCase(TestCase):
     def get_link_aliases(self, from_=None, count=None):
         """Make a link alias query"""
         return self.get_page(
-            url = API_PREFIX + '/linkaliases/',
+            url = API_PREFIX + '/aliases/',
             from_= from_, count = count,
         )
 
@@ -185,5 +185,5 @@ class ApiTestCase(TestCase):
 
     def make_resolve_link_aliases_request(self, aliases):
         body = { 'aliases': aliases }
-        return self.client.post(API_PREFIX + '/linkaliases/resolve',
+        return self.client.post(API_PREFIX + '/aliases/resolve',
                 data=json.dumps(body), content_type='application/json')
