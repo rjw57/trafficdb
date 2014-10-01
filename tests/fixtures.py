@@ -42,7 +42,11 @@ def create_fake_links(link_count=3, node_count=None):
 
     # Create some random links
     links = mixer.cycle(link_count).blend(Link, geom=link_geoms)
-    db.session.add_all(links)
+
+    # For bulk inserts, the following is more efficient than, e.g.,
+    # db.session.add_all(links)
+    link_values = list({'uuid': l.uuid, 'geom': l.geom} for l in links)
+    db.session.execute(Link.__table__.insert(link_values))
 
 def create_fake_observations(link_count=3, start=DEFAULT_START, duration=60*3, node_count=None):
     """Create a set of fake observations in the database."""
@@ -68,7 +72,16 @@ def create_fake_observations(link_count=3, start=DEFAULT_START, duration=60*3, n
                 Observation, type=type_, link_id=link_id,
                 observed_at=(t for t in obs_times)))
     log.info('Adding {0} observation(s) to database'.format(len(obs)))
-    db.session.add_all(obs)
+    # For bulk inserts, the following is more efficient than, e.g.,
+    # db.session.add_all(obs)
+    obs_values = list(
+        {
+            'value': o.value, 'type': o.type,
+            'observed_at': o.observed_at, 'link_id': o.link_id,
+        }
+        for o in obs
+    )
+    db.session.execute(Observation.__table__.insert(obs_values))
 
 def create_fake_link_aliases(alias_count=10):
     """Create a set of fake aliases for links.
@@ -83,8 +96,11 @@ def create_fake_link_aliases(alias_count=10):
     link_ids = set(db.session.query(Link.id))
 
     aliases = mixer.cycle(alias_count).blend(LinkAlias,
-        name=mxfake.gen_slug(),
-        link_id=mxgen.gen_choice(list(link_ids)),
-        link=None)
+        name=mxfake.gen_slug(), link=None,
+        link_id=mxgen.gen_choice(list(link_ids)))
     log.info('Adding {0} aliases to db'.format(len(aliases)))
-    db.session.add_all(aliases)
+
+    # For bulk inserts, the following is more efficient than, e.g.,
+    # db.session.add_all(aliases)
+    alias_values = list({'name': a.name, 'link_id': a.link_id} for a in aliases)
+    db.session.execute(LinkAlias.__table__.insert(alias_values))
