@@ -49,8 +49,10 @@ def resolve_link_aliases(session, aliases):
     session = session.session_factory()
     metadata = MetaData()
 
+    # Note that we give the table a random uuid-based name to avoid collisions
+    # with multiple runs of this function.
     class _LinkAliasNames(declarative_base(bind=session.bind, metadata=metadata)):
-        __tablename__ = 'tmp_link_alias_names'
+        __tablename__ = 'tmp_link_alias_names_' + uuid.uuid4().hex
         __table_args__ = {'prefixes': ['TEMPORARY']}
         name = db.Column(db.String, primary_key=True)
 
