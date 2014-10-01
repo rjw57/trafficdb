@@ -92,21 +92,27 @@ class TestLinkAlias(TestCase):
         q = resolve_link_aliases(db.session, alias_names, self.tmp_table)
         self.assertEqual(q.count(), len(alias_names))
 
-        for alias, row in zip(alias_names, q):
-            log.info('Resolution of {0} is {1}'.format(alias, row))
-            self.assertEqual(alias, row[0])
-            if alias.startswith('_invalid'):
-                self.assertIsNone(row[1])
+        alias_name_set = set(alias_names)
+        for name, id, uuid in q:
+            log.info('Resolution of {0} is {1}'.format(name, (id,uuid)))
+            self.assertIn(name, alias_name_set)
+            if name.startswith('_invalid'):
+                self.assertIsNone(id)
+                self.assertIsNone(uuid)
             else:
-                self.assertIsNotNone(row[1])
+                self.assertIsNotNone(id)
+                self.assertIsNotNone(uuid)
 
         q = resolve_link_aliases(db.session, alias_names, self.tmp_table)
         self.assertEqual(q.count(), len(alias_names))
 
-        for alias, row in zip(alias_names, q):
-            log.info('Resolution of {0} is {1}'.format(alias, row))
-            self.assertEqual(alias, row[0])
-            if alias.startswith('_invalid'):
-                self.assertIsNone(row[1])
+        alias_name_set = set(alias_names)
+        for name, id, uuid in q:
+            log.info('Resolution of {0} is {1}'.format(name, (id,uuid)))
+            self.assertIn(name, alias_name_set)
+            if name.startswith('_invalid'):
+                self.assertIsNone(id)
+                self.assertIsNone(uuid)
             else:
-                self.assertIsNotNone(row[1])
+                self.assertIsNotNone(id)
+                self.assertIsNotNone(uuid)
