@@ -50,7 +50,8 @@ class TestIndex(TestCase):
     def test_integer_from(self):
         log.info('Querying page with integer from')
         response = self.get_links(from_=0)
-        self.assertEqual(response.status_code, 400)
+        # Server returns 404 to avoid leaking information on link id format
+        self.assertEqual(response.status_code, 404)
 
     def test_negative_count(self):
         request_count = -3

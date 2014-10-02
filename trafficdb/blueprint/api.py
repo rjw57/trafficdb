@@ -15,7 +15,7 @@ import six
 from sqlalchemy import func
 from sqlalchemy.orm.exc import NoResultFound
 import pytz
-from werkzeug.exceptions import NotFound
+from werkzeug.exceptions import NotFound, BadRequest
 
 from trafficdb.models import *
 from trafficdb.queries import (
@@ -83,6 +83,14 @@ def verify_link_id(unverified_link_id):
     # Should be unreachable
     assert False
 
+class ApiBadRequest(BadRequest):
+    def __init__(self, message):
+        resp = dict(error=dict(message=message))
+        super(ApiBadRequest, self).__init__(
+                description=message,
+                response=make_response(jsonify(resp), 400)
+        )
+
 @app.route('/')
 def index():
     return jsonify(dict(
@@ -107,14 +115,14 @@ def links():
         requested_count = int(request.args.get('count', PAGE_LIMIT))
     except ValueError:
         # requested count was not an integer
-        return abort(400)
+        raise ApiBadRequest('count parameter must be an integer')
 
     # Limit count to the maximum we're prepared to give
     requested_count = min(PAGE_LIMIT, requested_count)
 
     # Count must be +ve
     if requested_count < 0:
-        return abort(400)
+        raise ApiBadRequest('count parameter must be positive')
 
     # Query link objects
     links_q = db.session.query(Link.uuid, func.ST_AsGeoJSON(Link.geom)).order_by(Link.uuid)
@@ -124,8 +132,9 @@ def links():
         try:
             from_uuid = urlsafe_id_to_uuid(unverified_from_id)
         except:
-            # If from id is invalid, this is a bad request
-            return abort(400)
+            # If from id is invalid, this is a bad request but raise a 404 to
+            # avoid exposing details of link id encoding.
+            raise NotFound()
         links_q = links_q.filter(Link.uuid >= from_uuid)
 
     links_q = links_q.limit(requested_count+1)
@@ -181,9 +190,9 @@ def patch_links():
 
     # Sanitise body
     if body is None:
-        return abort(400)
+        raise ApiBadRequest('request body must be non-empty')
     if not isinstance(body, dict):
-        return abort(400)
+        raise ApiBadRequest('request body must be a JSON object')
 
     # Extract create requests
     try:
@@ -191,7 +200,7 @@ def patch_links():
     except KeyError:
         create_requests = []
     if not isinstance(create_requests, list) or len(create_requests) > PAGE_LIMIT:
-        return abort(400)
+        raise ApiBadRequest('create request must be an array of at most {0} items'.format(PAGE_LIMIT))
 
     # Process create requests
     created_links = []
@@ -223,12 +232,12 @@ def observations(unverified_link_id):
         duration = int(request.args.get('duration', MAX_DURATION))
     except ValueError:
         # If duration can't be parsed as an integer, that's a bad request
-        return abort(400)
+        raise ApiBadRequest('duration parameter must be an integer')
 
     # Restrict duration to the maximum we're comfortable with
     duration = min(MAX_DURATION, duration)
     if duration < 0:
-        return abort(400)
+        raise ApiBadRequest('duration parameter must be positive')
 
     start_ts = request.args.get('start')
     if start_ts is None:
@@ -241,7 +250,7 @@ def observations(unverified_link_id):
         try:
             start_ts = int(start_ts)
         except ValueError:
-            return abort(400)
+            raise ApiBadRequest('start timestamp must be an integer')
 
     # Record parameters of sanitised query
     query_params = dict(start=start_ts, duration=duration)
@@ -299,14 +308,14 @@ def link_aliases():
         requested_count = int(request.args.get('count', PAGE_LIMIT))
     except ValueError:
         # requested count was not an integer
-        return abort(400)
+        raise ApiBadRequest('count parameter must be an integer')
 
     # Limit count to the maximum we're prepared to give
     requested_count = min(PAGE_LIMIT, requested_count)
 
     # Count must be +ve
     if requested_count < 0:
-        return abort(400)
+        raise ApiBadRequest('count parameter must be positive')
 
     # Query link objects
     aliases_q = db.session.query(LinkAlias.name, Link.uuid).join(Link).\
@@ -351,19 +360,19 @@ def link_aliases_resolve():
     # Request body should be JSON
     req_body = request.get_json()
     if req_body is None:
-        return abort(400)
+        raise ApiBadRequest('request body must be non-empty')
 
     # Retrieve and sanitise alias list
     try:
         aliases = req_body['aliases']
     except KeyError:
-        return abort(400)
+        raise ApiBadRequest('request body must have an "aliases" field')
     if not isinstance(aliases, list):
-        return abort(400)
+        raise ApiBadRequest('aliases must be an array')
     if len(aliases) > PAGE_LIMIT:
-        return abort(400)
+        raise ApiBadRequest('aliases may only have at most {0} entries'.format(PAGE_LIMIT))
     if any(not isinstance(a, six.string_types) for a in aliases):
-        return abort(400)
+        raise ApiBadRequest('aliases must contain only strings')
 
     def link_from_uuid(link_uuid):
         if link_uuid is None:
