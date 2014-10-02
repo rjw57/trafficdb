@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 import random
 
@@ -247,3 +248,85 @@ class TestLinkAliases(TestCase):
         log.info('Querying aliases: {0}'.format(query_names))
         response = self.make_resolve_link_aliases_request(query_names)
         self.assert_400(response)
+
+ALIASES_PATH = API_PREFIX + '/aliases/'
+
+class TestMutation(TestCase):
+    @classmethod
+    def create_fixtures(cls):
+        create_fake_links(link_count=20)
+
+    def new_alias_request(self, link_data):
+        return self.client.patch(ALIASES_PATH,
+                data=json.dumps(link_data),
+                content_type='application/json')
+
+    def test_empty_body_request(self):
+        response = self.client.patch(ALIASES_PATH, data='', content_type='application/json')
+        self.assert_400(response)
+
+    def test_non_json_body_request(self):
+        response = self.client.patch(ALIASES_PATH, data='not json', content_type='application/json')
+        self.assert_400(response)
+
+    def test_no_content_type_body_request(self):
+        response = self.client.patch(ALIASES_PATH, data='{}')
+        self.assert_400(response)
+
+    def test_empty_request(self):
+        response = self.new_alias_request({})
+        self.assert_200(response)
+
+    def verify_create(self, create, response):
+        self.assert_200(response)
+        self.assertIn('create', response.json)
+        create_resp = response.json['create']
+        self.assertEqual(create_resp['count'], len(create))
+
+        # Verify by resolving
+        response = self.make_resolve_link_aliases_request(
+            list(cr['name'] for cr in create)
+        )
+        self.assert_200(response)
+        self.assertIn('resolutions', response.json)
+        resolutions = response.json['resolutions']
+        self.assertEqual(len(resolutions), len(create))
+
+        # What do we expect?
+        expected = {}
+        for cr in create:
+            expected[cr['name']] = cr['link']
+
+        log.info('resolutions: {0}'.format(resolutions))
+        log.info('expected: {0}'.format(expected))
+        for r_n, r_l in resolutions:
+            self.assertIn(r_n, expected)
+            self.assertEqual(r_l['id'], expected[r_n])
+
+    def test_create_single(self):
+        create = [
+            dict(name='new-alias', link=self.get_some_link_id()),
+        ]
+        log.info('Sending create request: {0}'.format(create))
+        response = self.new_alias_request(dict(create=create))
+        self.verify_create(create, response)
+
+    def test_create_multiple_identical(self):
+        create = [
+            dict(name='new-alias-1', link=self.get_some_link_id()),
+            dict(name='new-alias-1', link=self.get_some_link_id()),
+            dict(name='new-alias-1', link=self.get_some_link_id()),
+        ]
+        log.info('Sending create request: {0}'.format(create))
+        response = self.new_alias_request(dict(create=create))
+        self.assert_400(response)
+
+    def test_create_multiple(self):
+        create = [
+            dict(name='new-alias-1', link=self.get_some_link_id()),
+            dict(name='new-alias-2', link=self.get_some_link_id()),
+            dict(name='new-alias-3', link=self.get_some_link_id()),
+        ]
+        log.info('Sending create request: {0}'.format(create))
+        response = self.new_alias_request(dict(create=create))
+        self.verify_create(create, response)

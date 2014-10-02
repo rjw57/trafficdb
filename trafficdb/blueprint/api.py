@@ -13,6 +13,7 @@ import uuid
 from flask import *
 import six
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 import pytz
 from werkzeug.exceptions import NotFound, BadRequest
@@ -387,8 +388,58 @@ def link_aliases_resolve():
         link_id = uuid_to_urlsafe_id(link_uuid)
         return dict(id=link_id, url=url_for('.link', unverified_link_id=link_id, _external=True))
 
+    db.session.commit() # HACK: seems that temporary table sometimes is not created without this
     tmp_table = prepare_resolve_link_aliases(db.session)
     q = resolve_link_aliases(db.session, aliases, tmp_table)
     resolutions = list((r[0], link_from_uuid(r[2])) for r in q)
     response = dict(resolutions=resolutions)
+    return jsonify(response)
+
+@app.route('/aliases/', methods=['PATCH'])
+def patch_aliases():
+    # Get request body as JSON document
+    body = request.get_json()
+
+    # Sanitise body
+    if body is None:
+        raise ApiBadRequest('request body must be non-empty')
+    if not isinstance(body, dict):
+        raise ApiBadRequest('request body must be a JSON object')
+
+    # Extract create requests
+    try:
+        create_requests = body['create']
+    except KeyError:
+        create_requests = []
+    if not isinstance(create_requests, list) or len(create_requests) > PAGE_LIMIT:
+        raise ApiBadRequest('create request must be an array of at most {0} items'.format(PAGE_LIMIT))
+
+    # Process create requests
+    created_aliases = []
+    for r in create_requests:
+        try:
+            req_name, req_link = r['name'], r['link']
+            assert isinstance(req_name, six.string_types)
+            assert isinstance(req_link, six.string_types)
+        except:
+            raise ApiBadRequest('create request number {0} is malformed'.format(
+                len(created_aliases)+1))
+
+        try:
+            link_id, _ = verify_link_id(req_link)
+        except NotFound:
+            raise ApiBadRequest(
+                'create request number {0} references non-existent link "{1}"'.format(
+                    len(created_aliases)+1, req_link))
+
+        created_aliases.append(LinkAlias(name=req_name, link_id=link_id))
+
+    db.session.add_all(created_aliases)
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        raise ApiBadRequest('invalid request (perhaps identical alias names?)')
+
+    response = dict(create={ 'status': 'ok', 'count': len(created_aliases) })
     return jsonify(response)
