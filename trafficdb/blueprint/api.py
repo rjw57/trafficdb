@@ -243,7 +243,14 @@ def observations(unverified_link_id):
     if start_ts is None:
         # Get minimum and maximum times
         min_d, max_d = observation_date_range(db.session).one()
-        start_ts = datetime_to_javascript_timestamp(
+
+        # Corner case: if there are no observations in the database, it doesn't
+        # really matter what start time we use so just use now.
+        if min_d is None:
+            start_ts = datetime_to_javascript_timestamp(
+                pytz.utc.localize(datetime.datetime.utcnow()))
+        else:
+            start_ts = datetime_to_javascript_timestamp(
                 max_d - datetime.timedelta(milliseconds=duration))
     else:
         # Verify start ts is indeed an integer
